@@ -75,7 +75,6 @@
          type(Opacity), intent(inout) :: op
          character (len=256) :: eos_file_prefix
          integer :: ierr
-         integer, pointer, dimension(:) :: net_iso, chem_id
          real(kind=8) :: frac, dabar_dx(species), dzbar_dx(species), &
                sumx, xh, xhe, xz, mass_correction, dmc_dx(species)
 
@@ -173,7 +172,7 @@
          call shutdown_eos(op)
          call shutdown_kap(op)
       end subroutine shutdown_opacity
-           
+
       
       subroutine eos_PT(op, Pgas, T, &
             Rho, log10Rho, dlnRho_dlnPgas_const_T, &
