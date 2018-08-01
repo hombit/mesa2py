@@ -140,6 +140,7 @@
 
       type(Opacity) function init_opacity()
          implicit none
+         
          call init_const
          call init_chem
          call init_eos(init_opacity)
@@ -148,7 +149,8 @@
 
 
       subroutine shutdown_eos(op)
-         type(Opacity) :: op
+         implicit none      
+         type(Opacity), intent(inout) :: op
 
          call free_eos_handle(op%eos_handle)
          call eos_shutdown
@@ -156,9 +158,20 @@
       end subroutine shutdown_eos
 
 
+      subroutine shutdown_kap(op)
+         implicit none
+         type(Opacity), intent(inout) :: op
+
+         call free_kap_handle(op%kap_handle)
+         call kap_shutdown
+      end subroutine shutdown_kap
+
+
       subroutine shutdown_opacity(op)
          type(Opacity) :: op
+         
          call shutdown_eos(op)
+         call shutdown_kap(op)
       end subroutine shutdown_opacity
            
       
