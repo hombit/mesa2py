@@ -1,4 +1,4 @@
-      module opacity
+      module class_opacity
 
       use const_lib
       use crlibm_lib
@@ -6,38 +6,54 @@
       use chem_lib
       use eos_def
       use eos_lib
+      use kap_def
+      use kap_lib
 
       implicit none
+      private
+      public :: Opacity, init_Opacity, shutdown_Opacity, eos_PT, species
 
-      integer :: handle
-      real(dp) :: X, Z, Y, abar, zbar, z2bar, ye
+      
+      logical, parameter :: use_cache = .true.
       integer, parameter :: species = 7
       integer, parameter :: h1=1, he4=2, c12=3, n14=4, o16=5, ne20=6, &
             mg24=7
-      integer, pointer, dimension(:) :: net_iso, chem_id
-      real(dp) :: xa(species)
-      character (len=256) :: my_mesa_dir
+      
+      
+      type Opacity
+         integer :: eos_handle, kap_handle
+         real(kind=8) :: xa(species)
+         real(kind=8) :: Y, abar, zbar, z2bar, ye
+         integer, pointer, dimension(:) :: net_iso, chem_id
+         real(kind=8) :: X = 0.70
+         real(kind=8) :: Z = 0.02
+         real(kind=8) :: Zfrac_C = 0.173312d0
+         real(kind=8) :: Zfrac_N = 0.053177d0
+         real(kind=8) :: Zfrac_O = 0.482398d0
+         real(kind=8) :: Zfrac_Ne = 0.098675d0
+      end type Opacity
 
 !      private
 !      public :: init_opacity, shutdown_opacity, get_hbar
 
       contains
 
+
       subroutine init_const()
+         implicit none
          integer :: ierr
 
          ierr = 0
-         my_mesa_dir = ''
-         call const_init(my_mesa_dir, ierr)
+         call const_init('', ierr)
          if (ierr /= 0) then
             write(*,*) 'const_init failed'
-            write(*,*) my_mesa_dir
             stop 1
          end if
       end subroutine init_const
 
 
       subroutine init_chem()
+         implicit none
          integer :: ierr
 
          call crlibm_init
@@ -51,88 +67,124 @@
       end subroutine init_chem
 
 
-      subroutine init_eos()
+      subroutine init_eos(op)
          implicit none
+         type(Opacity), intent(inout) :: op
          character (len=256) :: eos_file_prefix
          integer :: ierr
          integer, pointer, dimension(:) :: net_iso, chem_id
-         logical, parameter :: use_cache = .true.
-         integer, parameter :: species = 7
-         real(kind=8) :: xa(species)
-         real(kind=8), parameter :: X = 0.70
-         real(kind=8), parameter :: Z = 0.02
-         real(kind=8), parameter :: Zfrac_C = 0.173312d0
-         real(kind=8), parameter :: Zfrac_N = 0.053177d0
-         real(kind=8), parameter :: Zfrac_O = 0.482398d0
-         real(kind=8), parameter :: Zfrac_Ne = 0.098675d0
          real(kind=8) :: frac, dabar_dx(species), dzbar_dx(species), &
                sumx, xh, xhe, xz, mass_correction, dmc_dx(species)
 
-         eos_file_prefix = 'mesa'
-         call eos_init(eos_file_prefix, '', '', '', use_cache, ierr)
+         call eos_init('mesa', '', '', '', use_cache, ierr)
          if (ierr /= 0) then
             write(*,*) 'eos_init failed'
             stop 1
          end if
          
-         handle = alloc_eos_handle(ierr)
+         op%eos_handle = alloc_eos_handle(ierr)
          if (ierr /= 0) then
-            write(*,*) 'failed trying to allocate eos handle'
+            write(*,*) 'failed trying to allocate eos eos_handle'
             stop 1
          end if
          
-         allocate(net_iso(num_chem_isos), chem_id(species), stat=ierr)
+         allocate(op%net_iso(num_chem_isos), op%chem_id(species), &
+               stat=ierr)
          if (ierr /= 0) stop 'allocate failed'
-         net_iso(:) = 0
-         chem_id(h1) = ih1; net_iso(ih1) = h1
-         chem_id(he4) = ihe4; net_iso(ihe4) = he4
-         chem_id(c12) = ic12; net_iso(ic12) = c12
-         chem_id(n14) = in14; net_iso(in14) = n14
-         chem_id(o16) = io16; net_iso(io16) = o16
-         chem_id(ne20) = ine20; net_iso(ine20) = ne20
-         chem_id(mg24) = img24; net_iso(img24) = mg24
-         Y = 1 - (X + Z)               
-         xa(h1) = X
-         xa(he4) = Y
-         xa(c12) = Z * Zfrac_C
-         xa(n14) = Z * Zfrac_N
-         xa(o16) = Z * Zfrac_O
-         xa(ne20) = Z * Zfrac_Ne
-         xa(species) = 1 - sum(xa(1:species-1))
+         op%net_iso(:) = 0
+         op%chem_id(h1) = ih1; op%net_iso(ih1) = h1
+         op%chem_id(he4) = ihe4; op%net_iso(ihe4) = he4
+         op%chem_id(c12) = ic12; op%net_iso(ic12) = c12
+         op%chem_id(n14) = in14; op%net_iso(in14) = n14
+         op%chem_id(o16) = io16; op%net_iso(io16) = o16
+         op%chem_id(ne20) = ine20; op%net_iso(ine20) = ne20
+         op%chem_id(mg24) = img24; op%net_iso(img24) = mg24
+         op%Y = 1 - (op%X + op%Z)               
+         op%xa(h1) = op%X
+         op%xa(he4) = op%Y
+         op%xa(c12) = op%Z * op%Zfrac_C
+         op%xa(n14) = op%Z * op%Zfrac_N
+         op%xa(o16) = op%Z * op%Zfrac_O
+         op%xa(ne20) = op%Z * op%Zfrac_Ne
+         op%xa(species) = 1 - sum(op%xa(1:species-1))
          call composition_info( &
-               species, chem_id, xa, xh, xhe, xz, abar, zbar, z2bar, &
-               ye, mass_correction, sumx, dabar_dx, dzbar_dx, dmc_dx)
+               species, op%chem_id, op%xa, xh, xhe, xz, op%abar, &
+               op%zbar, op%z2bar, op%ye, mass_correction, sumx, &
+               dabar_dx, dzbar_dx, dmc_dx)
       end subroutine init_eos
 
 
-      subroutine init_opacity()
+      subroutine init_kap(op)
+         implicit none
+         type(Opacity), intent(inout) :: op
+         integer :: ierr
+
+         call kap_init('gn93', '', '', 0.0_dp, 0.0_dp, use_cache, &
+               '', '', ierr)
+         if(ierr/=0) stop 'problem in kap_init'
+         
+         op%kap_handle = alloc_kap_handle(ierr)
+         if(ierr/=0) stop 'problem in alloc_kap_handle'
+
+         call kap_set_choices(op%kap_handle, .true., .true., .true., &
+               .true., .false., 0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
+               ierr)
+         if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
+      end subroutine init_kap
+
+
+      type(Opacity) function init_opacity()
          implicit none
          call init_const
          call init_chem
-         call init_eos
-      end subroutine init_opacity
+         call init_eos(init_opacity)
+         call init_kap(init_opacity)
+      end function init_opacity
 
 
-      subroutine shutdown_eos()
-         call free_eos_handle(handle)
+      subroutine shutdown_eos(op)
+         type(Opacity) :: op
+
+         call free_eos_handle(op%eos_handle)
          call eos_shutdown
-         deallocate(net_iso, chem_id)
+         deallocate(op%net_iso, op%chem_id)
       end subroutine shutdown_eos
 
 
-      subroutine shutdown_opacity()
-         call shutdown_eos
+      subroutine shutdown_opacity(op)
+         type(Opacity) :: op
+         call shutdown_eos(op)
       end subroutine shutdown_opacity
-         
-
-
-      subroutine get_hbar(x)
+           
+      
+      subroutine eos_PT(op, Pgas, T, &
+            Rho, log10Rho, dlnRho_dlnPgas_const_T, &
+            dlnRho_dlnT_const_Pgas, &
+            res, d_dlnRho_const_T, d_dlnT_const_Rho, &
+            d_dabar_const_TRho, d_dzbar_const_TRho, &
+            ierr)
          implicit none
-         real(kind=8), intent(out) :: x
-         
-         x = hbar
-      end subroutine get_hbar
+         type(Opacity), intent(in) :: op
+         real(kind=8), intent(in) :: Pgas, T
+         real(kind=8), intent(out) :: Rho, log10Rho, &
+               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas
+         real(kind=8), intent(inout) :: res(:)
+         real(kind=8), intent(inout) :: d_dlnRho_const_T(:), &
+               d_dlnT_const_Rho(:)
+         real(kind=8), intent(inout) :: d_dabar_const_TRho(:), &
+               d_dzbar_const_TRho(:)
+         integer, intent(out) :: ierr
+
+         call eosPT_get(op%eos_handle, op%Z, op%X, op%abar, op%zbar, &
+               species, op%chem_id, op%net_iso, op%xa, &
+               Pgas, log10_cr(Pgas), T, log10_cr(T), &
+               Rho, log10Rho, &
+               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
+               res, d_dlnRho_const_T, d_dlnT_const_Rho, &
+               d_dabar_const_TRho, d_dzbar_const_TRho, &
+               ierr)
+      end subroutine eos_PT
 
 
-      end module opacity
+      end module class_opacity
 
