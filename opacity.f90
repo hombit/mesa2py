@@ -11,16 +11,19 @@
 
       implicit none
       private
-      public :: Opacity, init_Opacity, shutdown_Opacity, eos_PT, species
+      public :: Opacity, init_Opacity, shutdown_Opacity, &
+            eos_PT, kap_log10DT, &
+            species
 
       
       logical, parameter :: use_cache = .true.
+      logical, parameter :: use_Type2_opacities = .false.
       integer, parameter :: species = 7
       integer, parameter :: h1=1, he4=2, c12=3, n14=4, o16=5, ne20=6, &
             mg24=7
       
       
-      type Opacity
+      type :: Opacity
          integer :: eos_handle, kap_handle
          real(kind=8) :: xa(species)
          real(kind=8) :: Y, abar, zbar, z2bar, ye
@@ -126,8 +129,10 @@
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
+         ! All these numbers don't matter while use_Type2_opacity is false
          call kap_set_choices(op%kap_handle, .true., .true., .true., &
-               .true., .false., 0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
+               .true., use_Type2_opacities, &
+               0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
                ierr)
          if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
       end subroutine init_kap
@@ -184,6 +189,27 @@
                d_dabar_const_TRho, d_dzbar_const_TRho, &
                ierr)
       end subroutine eos_PT
+
+
+      subroutine kap_log10DT(op, log10Rho, log10T, &
+            kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
+         implicit none
+         type(Opacity), intent(in) :: op
+         real(kind=8), intent(in) :: log10Rho, log10T
+         real(kind=8), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
+         integer, intent(out) :: ierr
+         real(kind=8), parameter :: lnfree_e = 0.0  ! needed for Compton
+         real(kind=8), parameter :: d_lnfree_e_dlnRho = 0.0
+         real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0
+         real(kind=8) :: frac_Type2
+
+         call kap_get(op%kap_handle, &
+               op%zbar, op%X, op%Z, op%Z, &
+               op%xa(c12), op%xa(n14), op%xa(o16), op%xa(ne20), &
+               log10Rho, log10T, &
+               lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
+               frac_Type2, kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
+      end subroutine kap_log10DT
 
 
       end module class_opacity
