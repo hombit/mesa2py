@@ -1,4 +1,8 @@
+      #include "macros.h"
+      
       module class_opacity
+
+      use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double
 
       use const_lib
       use crlibm_lib
@@ -18,22 +22,22 @@
       
       logical, parameter :: use_cache = .true.
       logical, parameter :: use_Type2_opacities = .false.
-      integer, parameter :: species = 7
+      integer(c_int), parameter :: species = _SPECIES
       integer, parameter :: h1=1, he4=2, c12=3, n14=4, o16=5, ne20=6, &
             mg24=7
       
       
-      type :: Opacity
-         integer :: eos_handle, kap_handle
-         real(kind=8) :: xa(species)
-         real(kind=8) :: Y, abar, zbar, z2bar, ye
-         integer, pointer, dimension(:) :: net_iso, chem_id
-         real(kind=8) :: X = 0.70
-         real(kind=8) :: Z = 0.02
-         real(kind=8) :: Zfrac_C = 0.173312d0
-         real(kind=8) :: Zfrac_N = 0.053177d0
-         real(kind=8) :: Zfrac_O = 0.482398d0
-         real(kind=8) :: Zfrac_Ne = 0.098675d0
+      type, bind(C) :: Opacity
+         integer(c_int) :: eos_handle, kap_handle
+         real(c_double) :: xa(species)
+         real(c_double) :: Y, abar, zbar, z2bar, ye
+         type(c_ptr) :: net_iso, chem_id
+         real(c_double) :: X = 0.70
+         real(c_double) :: Z = 0.02
+         real(c_double) :: Zfrac_C = 0.173312d0
+         real(c_double) :: Zfrac_N = 0.053177d0
+         real(c_double) :: Zfrac_O = 0.482398d0
+         real(c_double) :: Zfrac_Ne = 0.098675d0
       end type Opacity
 
 !      private
@@ -77,6 +81,7 @@
          integer :: ierr
          real(kind=8) :: frac, dabar_dx(species), dzbar_dx(species), &
                sumx, xh, xhe, xz, mass_correction, dmc_dx(species)
+         integer(c_int), pointer, dimension(:) :: net_iso, chem_id
 
          call eos_init('mesa', '', '', '', use_cache, ierr)
          if (ierr /= 0) then
@@ -90,17 +95,19 @@
             stop 1
          end if
          
-         allocate(op%net_iso(num_chem_isos), op%chem_id(species), &
+         allocate(net_iso(num_chem_isos), chem_id(species), &
                stat=ierr)
+         op%net_iso = c_loc(net_iso(1))
+         op%chem_id = c_loc(chem_id(1))
          if (ierr /= 0) stop 'allocate failed'
-         op%net_iso(:) = 0
-         op%chem_id(h1) = ih1; op%net_iso(ih1) = h1
-         op%chem_id(he4) = ihe4; op%net_iso(ihe4) = he4
-         op%chem_id(c12) = ic12; op%net_iso(ic12) = c12
-         op%chem_id(n14) = in14; op%net_iso(in14) = n14
-         op%chem_id(o16) = io16; op%net_iso(io16) = o16
-         op%chem_id(ne20) = ine20; op%net_iso(ine20) = ne20
-         op%chem_id(mg24) = img24; op%net_iso(img24) = mg24
+         net_iso(:) = 0
+         chem_id(h1) = ih1; net_iso(ih1) = h1
+         chem_id(he4) = ihe4; net_iso(ihe4) = he4
+         chem_id(c12) = ic12; net_iso(ic12) = c12
+         chem_id(n14) = in14; net_iso(in14) = n14
+         chem_id(o16) = io16; net_iso(io16) = o16
+         chem_id(ne20) = ine20; net_iso(ine20) = ne20
+         chem_id(mg24) = img24; net_iso(img24) = mg24
          op%Y = 1 - (op%X + op%Z)               
          op%xa(h1) = op%X
          op%xa(he4) = op%Y
@@ -110,7 +117,7 @@
          op%xa(ne20) = op%Z * op%Zfrac_Ne
          op%xa(species) = 1 - sum(op%xa(1:species-1))
          call composition_info( &
-               species, op%chem_id, op%xa, xh, xhe, xz, op%abar, &
+               species, chem_id, op%xa, xh, xhe, xz, op%abar, &
                op%zbar, op%z2bar, op%ye, mass_correction, sumx, &
                dabar_dx, dzbar_dx, dmc_dx)
       end subroutine init_eos
@@ -137,7 +144,7 @@
       end subroutine init_kap
 
 
-      type(Opacity) function init_opacity()
+      type(Opacity) function init_Opacity() bind(C, name='init_Opacity')
          implicit none
          
          call init_const
@@ -150,10 +157,13 @@
       subroutine shutdown_eos(op)
          implicit none      
          type(Opacity), intent(inout) :: op
+         !integer, pointer, dimension(:) :: net_iso, chem_id
 
          call free_eos_handle(op%eos_handle)
          call eos_shutdown
-         deallocate(op%net_iso, op%chem_id)
+         ! call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
+         ! call c_f_pointer(op%chem_id, chem_id, [species])
+         ! deallocate(net_iso, chem_id)
       end subroutine shutdown_eos
 
 
@@ -166,7 +176,7 @@
       end subroutine shutdown_kap
 
 
-      subroutine shutdown_opacity(op)
+      subroutine shutdown_Opacity(op) bind(C, name='shutdown_Opacity')
          type(Opacity) :: op
          
          call shutdown_eos(op)
@@ -179,21 +189,25 @@
             dlnRho_dlnT_const_Pgas, &
             res, d_dlnRho_const_T, d_dlnT_const_Rho, &
             d_dabar_const_TRho, d_dzbar_const_TRho, &
-            ierr)
+            ierr &
+            ) bind(C, name='eos_PT')
          implicit none
          type(Opacity), intent(in) :: op
-         real(kind=8), intent(in) :: Pgas, T
-         real(kind=8), intent(out) :: Rho, log10Rho, &
+         real(c_double), value :: Pgas, T
+         real(c_double), intent(out) :: Rho, log10Rho, &
                dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas
-         real(kind=8), intent(inout) :: res(:)
-         real(kind=8), intent(inout) :: d_dlnRho_const_T(:), &
-               d_dlnT_const_Rho(:)
-         real(kind=8), intent(inout) :: d_dabar_const_TRho(:), &
-               d_dzbar_const_TRho(:)
-         integer, intent(out) :: ierr
+         real(c_double), intent(inout) :: res(species)
+         real(c_double), intent(inout) :: d_dlnRho_const_T(species), &
+               d_dlnT_const_Rho(species)
+         real(c_double), intent(inout) :: d_dabar_const_TRho(species), &
+               d_dzbar_const_TRho(species)
+         integer(c_int), intent(out) :: ierr
+         integer(c_int), pointer, dimension(:) :: net_iso, chem_id
 
+         call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
+         call c_f_pointer(op%chem_id, chem_id, [species])
          call eosPT_get(op%eos_handle, op%Z, op%X, op%abar, op%zbar, &
-               species, op%chem_id, op%net_iso, op%xa, &
+               species, chem_id, net_iso, op%xa, &
                Pgas, log10_cr(Pgas), T, log10_cr(T), &
                Rho, log10Rho, &
                dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
@@ -204,12 +218,13 @@
 
 
       subroutine kap_log10DT(op, log10Rho, log10T, &
-            kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
+            kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr &
+            ) bind(C)
          implicit none
          type(Opacity), intent(in) :: op
          real(kind=8), intent(in) :: log10Rho, log10T
          real(kind=8), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
-         integer, intent(out) :: ierr
+         integer(c_int), intent(out) :: ierr
          real(kind=8), parameter :: lnfree_e = 0.0  ! needed for Compton
          real(kind=8), parameter :: d_lnfree_e_dlnRho = 0.0
          real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0
