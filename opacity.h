@@ -1,3 +1,7 @@
+#ifndef OPACITY_H
+#define OPACITY_H
+
+
 #include "macros.h"
 
 typedef struct {
@@ -20,3 +24,5 @@ void eos_PT(Opacity* op, double Pgas, double T,
 	double d_dabar_const_TRho[_SPECIES], double d_dzbar_const_TRho[_SPECIES],
 	int* ierr);
 
+
+#endif  // OPACITY_H
