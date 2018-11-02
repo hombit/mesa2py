@@ -16,7 +16,7 @@
       implicit none
       private
       public :: Opacity, init_Opacity, shutdown_Opacity, &
-            eos_PT, kap_log10DT, &
+            eos_PT, kap_DT, &
             species
 
       
@@ -217,12 +217,12 @@
       end subroutine eos_PT
 
 
-      subroutine kap_log10DT(op, log10Rho, log10T, &
+      subroutine kap_DT(op, Rho, T, &
             kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr &
-            ) bind(C)
+            ) bind(C, name='kap_DT')
          implicit none
          type(Opacity), intent(in) :: op
-         real(kind=8), intent(in) :: log10Rho, log10T
+         real(kind=8), value :: Rho, T
          real(kind=8), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
          integer(c_int), intent(out) :: ierr
          real(kind=8), parameter :: lnfree_e = 0.0  ! needed for Compton
@@ -230,13 +230,15 @@
          real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0
          real(kind=8) :: frac_Type2
 
+         
+
          call kap_get(op%kap_handle, &
                op%zbar, op%X, op%Z, op%Z, &
                op%xa(c12), op%xa(n14), op%xa(o16), op%xa(ne20), &
-               log10Rho, log10T, &
+               log10_cr(Rho), log10_cr(T), &
                lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
                frac_Type2, kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
-      end subroutine kap_log10DT
+      end subroutine kap_DT
 
 
       end module class_opacity

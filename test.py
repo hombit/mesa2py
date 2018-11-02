@@ -4,11 +4,16 @@ import os
 
 import numpy as np
 
-from opacity import opacity
+from opacity import Opac
 
-os.environ['MESA_DIR'] = os.path.abspath('./mesa')
+opacity = Opac(mesa_dir='/mesa')
 
-opacity.init_opacity()
-print(opacity.get_hbar())
-print(opacity.xa)
-opacity.shutdown_opacity()
+print(opacity.X)
+p = 1e4
+temp = 1e4
+rho = opacity.rho(p, temp)
+print(rho)
+kappa = opacity.kappa(rho, temp)
+print(kappa)
+
+del opacity

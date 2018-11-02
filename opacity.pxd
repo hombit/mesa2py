@@ -1,3 +1,5 @@
+# cython: language_level=3
+
 ctypedef double[7] species_double_array
 
 cdef extern from 'opacity.h' nogil:
@@ -29,3 +31,5 @@ cdef extern from 'opacity.h' nogil:
                      species_double_array, species_double_array,
                      species_double_array, species_double_array,
                      int*)
+    cdef void kap_DT(Opacity*, double, double,
+                     double*, double*, double*, int*)

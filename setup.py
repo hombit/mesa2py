@@ -8,12 +8,19 @@ from tempfile import TemporaryDirectory, NamedTemporaryFile
 
 import numpy as np
 from Cython.Build import cythonize
-from setuptools import setup, Extension
+from setuptools import setup, Extension, Command
 
 
-MESASDK_ROOT = '/Applications/mesasdk'
-MESA_DIR = os.path.abspath('./mesa/')
+MESASDK_ROOT = os.path.abspath(
+    os.environ.get('MESASDK_ROOT', '/Applications/mesasdk')
+)
+MESASDK_INCLUDE = os.path.join(MESASDK_ROOT, 'include')
+MESASDK_LIB = os.path.join(MESASDK_ROOT, 'lib')
+MESA_DIR = os.path.abspath(
+    os.environ.get('MESA_DIR', './mesa/')
+)
 MESA_INCLUDE = os.path.join(MESA_DIR, 'include')
+MESA_LIB = os.path.join(MESA_DIR, 'lib')
 os.environ['PATH'] = os.path.join(MESASDK_ROOT, 'bin') + ':' + os.environ['PATH']
 os.environ['CC'] = os.path.join(MESASDK_ROOT, 'bin/gcc')
 
@@ -51,10 +58,25 @@ def build_mesa(clean=True):
     with cd(MESA_DIR), TemporaryDirectory() as tmp_path:
         compile_util('ndiff', './utils/ndiff-2.00.tar.gz', tmp_path)
         compile_util('makedepf90', './utils/makedepf90-2.8.8.tar.gz', tmp_path)
-        env = get_build_path(tmp_path)
+        env = get_build_env(tmp_path)
         if clean:
             check_call([call_mesa_script_sh, './clean'], env=env)
         check_call([call_mesa_script_sh, './install'], env=env)
+
+
+class BuildMesaCommand(Command):
+    """Build Mesa Setup Command"""
+    description = "Build mesa"
+    user_options = [('clean', None, 'clean before build',),]
+
+    def initialize_options(self):
+        self.clean = None
+
+    def finalize_options(self):
+        pass
+
+    def run(self):
+        build_mesa(clean=self.clean)
 
 
 def build_f90(sources=('opacity.f90',)):
@@ -69,6 +91,7 @@ def build_f90(sources=('opacity.f90',)):
                         '-O3',
                         '-I' + MESA_INCLUDE,
                         '-fopenmp',
+                        '-fPIC',
                         '-c',
                         tf.name,
                         '-o' + obj])
@@ -85,25 +108,36 @@ def fortranize(extensions):
     return extensions
 
 
-extensions = [Extension(
-    name='opacity',
-    sources=['opacity.f90', 'opacity.pyx'],
-    include_dirs=[MESA_INCLUDE, np.get_include()],
-    library_dirs=[MESASDK_ROOT + '/lib', 'mesa/lib'],
-    extra_compile_args=['-fopenmp'],
-    extra_link_args=[
-        '-lgomp',  # system
-        '-llapack', '-lblas',  # MESA SDK
-        '-lnet', '-leos', '-lkap', '-lrates', '-lchem', '-linterp_2d',  # MESA
-            '-linterp_1d', '-lnum', '-lf2crlibm', '-lmtx', '-lconst',
-            '-lutils', '-lcrlibm'
-    ],
-)]
+def main():
+    from sys import argv
+
+    BUILDMESA = 'buildmesa' in argv
+
+    extensions = [Extension(
+        name='opacity',
+        sources=['opacity.f90', 'opacity.pyx'],
+        include_dirs=[MESASDK_INCLUDE, MESA_INCLUDE, np.get_include()],
+        library_dirs=[MESASDK_LIB, MESA_LIB],
+        extra_compile_args=['-fopenmp'],
+        extra_link_args=[
+            '-lgomp',  # system
+            '-llapack', '-lblas',  # MESA SDK
+            '-lnet', '-leos', '-lkap', '-lrates', '-lchem', '-linterp_2d',  # MESA
+                '-linterp_1d', '-lnum', '-lf2crlibm', '-lmtx', '-lconst',
+                '-lutils', '-lcrlibm'
+        ],
+    )]
+
+    if not BUILDMESA:
+        extensions = fortranize(extensions)
+        extensions = cythonize(extensions, annotate=True, force=True)
+
+    setup(
+        ext_modules=extensions,
+        cmdclass={'buildmesa': BuildMesaCommand,},
+    )
 
 
 if __name__ == '__main__':
-    # build_mesa(clean=True)
-    extensions = fortranize(extensions)
-    extensions = cythonize(extensions, annotate=True, force=True)
-    setup(ext_modules=extensions)
+    main()
 
