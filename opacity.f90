@@ -25,7 +25,10 @@
       integer(c_int), parameter :: species = _SPECIES
       integer, parameter :: h1=1, he4=2, c12=3, n14=4, o16=5, ne20=6, &
             mg24=7
-      
+      character (len=256), parameter :: kappa_file_prefix = 'gn93'
+      character (len=256), parameter :: kappa_CO_prefix = 'gn93_co'
+      character (len=256), parameter :: kappa_lowT_prefix = &
+            'lowT_fa05_gs98'
       
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
@@ -77,7 +80,6 @@
       subroutine init_eos(op)
          implicit none
          type(Opacity), intent(inout) :: op
-         character (len=256) :: eos_file_prefix
          integer :: ierr
          real(kind=8) :: frac, dabar_dx(species), dzbar_dx(species), &
                sumx, xh, xhe, xz, mass_correction, dmc_dx(species)
@@ -128,7 +130,8 @@
          type(Opacity), intent(inout) :: op
          integer :: ierr
 
-         call kap_init('gn93', '', '', 0.0_dp, 0.0_dp, use_cache, &
+         call kap_init(kappa_file_prefix, kappa_CO_prefix, &
+               kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
                '', '', ierr)
          if(ierr/=0) stop 'problem in kap_init'
          
