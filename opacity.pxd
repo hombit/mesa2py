@@ -27,9 +27,7 @@ cdef extern from 'opacity.h' nogil:
     cdef void shutdown_Opacity(Opacity*)
     cdef void eos_PT(Opacity*, double, double,
                      double*, double*, double*, double*,
-                     species_double_array,
-                     species_double_array, species_double_array,
-                     species_double_array, species_double_array,
+                     double*, double*,
                      int*)
     cdef void kap_DT(Opacity*, double, double,
                      double*, double*, double*, int*)

@@ -138,7 +138,7 @@
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
-         ! All these numbers don't matter while use_Type2_opacity is false
+         ! All these numbers do not matter while use_Type2_opacity is false
          call kap_set_choices(op%kap_handle, .true., .true., .true., &
                .true., use_Type2_opacities, &
                0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
@@ -189,22 +189,19 @@
       
       subroutine eos_PT(op, Pgas, T, &
             Rho, log10Rho, dlnRho_dlnPgas_const_T, &
-            dlnRho_dlnT_const_Pgas, &
-            res, d_dlnRho_const_T, d_dlnT_const_Rho, &
-            d_dabar_const_TRho, d_dzbar_const_TRho, &
+            dlnRho_dlnT_const_Pgas, gamma1, gamma3, &
             ierr &
             ) bind(C, name='eos_PT')
          implicit none
          type(Opacity), intent(in) :: op
          real(c_double), value :: Pgas, T
          real(c_double), intent(out) :: Rho, log10Rho, &
-               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas
-         real(c_double), intent(inout) :: res(species)
-         real(c_double), intent(inout) :: d_dlnRho_const_T(species), &
-               d_dlnT_const_Rho(species)
-         real(c_double), intent(inout) :: d_dabar_const_TRho(species), &
-               d_dzbar_const_TRho(species)
+               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
+               gamma1, gamma3
          integer(c_int), intent(out) :: ierr
+         real(c_double), dimension(num_eos_basic_results) :: res, &
+               d_dlnRho_const_T, d_dlnT_const_Rho, &
+               d_dabar_const_TRho, d_dzbar_const_TRho
          integer(c_int), pointer, dimension(:) :: net_iso, chem_id
 
          call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
@@ -217,6 +214,8 @@
                res, d_dlnRho_const_T, d_dlnT_const_Rho, &
                d_dabar_const_TRho, d_dzbar_const_TRho, &
                ierr)
+         gamma1 = res(i_gamma1)
+         gamma3 = res(i_gamma3)
       end subroutine eos_PT
 
 

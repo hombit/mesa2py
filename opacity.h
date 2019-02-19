@@ -19,10 +19,10 @@ void shutdown_Opacity(Opacity*);
 void eos_PT(Opacity* op, double Pgas, double T,
 	double* Rho, double* log10Rho,
 	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas,
-	double res[_SPECIES],
-	double d_dlnRho_const_T[_SPECIES], double d_dlnT_const_Rho[_SPECIES],
-	double d_dabar_const_TRho[_SPECIES], double d_dzbar_const_TRho[_SPECIES],
+	double* gamma1, double* gamma3,
 	int* ierr);
 
+void kap_DT(Opacity* op, double Rho, double T,
+	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT, int* ierr);
 
 #endif  // OPACITY_H
