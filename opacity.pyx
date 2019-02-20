@@ -1,6 +1,7 @@
 import os
 from collections import namedtuple
 
+from cython cimport view
 from libc.math cimport NAN
 
 import numpy as np 
@@ -9,10 +10,10 @@ cimport numpy as cnp
 from opacity cimport *
 
 
-EOSGradients = namedtuple(
-    'EOSGradients', 
+EOSResults = namedtuple(
+    'EOSResults', 
     ('dlnRho_dlnPgas_const_T', 'dlnRho_dlnT_const_Pgas',
-     'gamma1', 'gamma3'),
+     'mu', 'lnfree_e', 'grad_ad',),
 )
 
 
@@ -31,21 +32,26 @@ cdef class Opac:
     def X(self):
         return self.fort_opacity.X
 
-    def rho(self, pres, temp, return_grad=False):
+    def rho(self, pres, temp, full_output=False):
         cdef tuple base_shape = cnp.broadcast(pres, temp).shape
         rho = np.empty(base_shape, np.double)
         log10Rho = np.empty(base_shape, np.double)
         dlnRho_dlnPgas_const_T = np.empty(base_shape, np.double)
         dlnRho_dlnT_const_Pgas = np.empty(base_shape, np.double)
-        gamma1 = np.empty(base_shape, np.double)
-        gamma3 = np.empty(base_shape, np.double)
         ierr = np.zeros(base_shape, dtype=np.int)
+
+        mu = np.empty(base_shape, np.double)
+        lnfree_e = np.empty(base_shape, np.double)
+        grad_ad = np.empty(base_shape, np.double)
+
+        res = view.array(shape=(NUM_EOS_RESULTS,), itemsize=sizeof(double), format='d')
+        cdef double[:] res_view = res
         
         cdef cnp.broadcast it = cnp.broadcast(
             pres, temp, rho, log10Rho,
             dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-            gamma1, gamma3,
-            ierr
+            ierr,
+            mu, lnfree_e, grad_ad,
         )
         cdef int i
         while cnp.PyArray_MultiIter_NOTDONE(it):
@@ -56,21 +62,24 @@ cdef class Opac:
                    <double*> cnp.PyArray_MultiIter_DATA(it, 3),
                    <double*> cnp.PyArray_MultiIter_DATA(it, 4),
                    <double*> cnp.PyArray_MultiIter_DATA(it, 5),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 6),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 7),
-                   <int*> cnp.PyArray_MultiIter_DATA(it, 8))
-            if (<int*> cnp.PyArray_MultiIter_DATA(it, 8))[0] != 0:
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 6))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = NAN
+                   &res_view[0],
+                   <int*> cnp.PyArray_MultiIter_DATA(it, 6))
+            if full_output:
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = res[3]
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = res[4]
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = res[6]
+                if (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN
             cnp.PyArray_MultiIter_NEXT(it)
-        if return_grad:
-            grads = EOSGradients(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-                                 gamma1, gamma3)
-            return rho, grads
+        if full_output:
+            return rho, EOSResults(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
+                                   mu, lnfree_e, grad_ad,)
         return rho
 
     def kappa(self, rho, temp, return_grad=False):

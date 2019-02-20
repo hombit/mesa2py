@@ -4,6 +4,8 @@
 
 #include "macros.h"
 
+int NUM_EOS_RESULTS;
+
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
 	double XA[_SPECIES];
@@ -19,7 +21,7 @@ void shutdown_Opacity(Opacity*);
 void eos_PT(Opacity* op, double Pgas, double T,
 	double* Rho, double* log10Rho,
 	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas,
-	double* gamma1, double* gamma3,
+	double*,
 	int* ierr);
 
 void kap_DT(Opacity* op, double Rho, double T,

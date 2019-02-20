@@ -2,7 +2,7 @@
       
       module class_opacity
 
-      use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double
+      use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double, c_char
 
       use const_lib
       use crlibm_lib
@@ -17,7 +17,7 @@
       private
       public :: Opacity, init_Opacity, shutdown_Opacity, &
             eos_PT, kap_DT, &
-            species
+            species, num_eos_resuls
 
       
       logical, parameter :: use_cache = .true.
@@ -30,6 +30,9 @@
       character (len=256), parameter :: kappa_lowT_prefix = &
             'lowT_fa05_gs98'
       
+      integer(c_int), protected, bind(C, name="NUM_EOS_RESULTS") :: &
+            num_eos_resuls = num_eos_basic_results
+
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
          real(c_double) :: xa(species)
@@ -189,17 +192,17 @@
       
       subroutine eos_PT(op, Pgas, T, &
             Rho, log10Rho, dlnRho_dlnPgas_const_T, &
-            dlnRho_dlnT_const_Pgas, gamma1, gamma3, &
+            dlnRho_dlnT_const_Pgas, res, &
             ierr &
             ) bind(C, name='eos_PT')
          implicit none
          type(Opacity), intent(in) :: op
          real(c_double), value :: Pgas, T
          real(c_double), intent(out) :: Rho, log10Rho, &
-               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
-               gamma1, gamma3
+               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas
+         real(c_double), intent(inout) :: res(num_eos_basic_results)
          integer(c_int), intent(out) :: ierr
-         real(c_double), dimension(num_eos_basic_results) :: res, &
+         real(c_double), dimension(num_eos_basic_results) :: &
                d_dlnRho_const_T, d_dlnT_const_Rho, &
                d_dabar_const_TRho, d_dzbar_const_TRho
          integer(c_int), pointer, dimension(:) :: net_iso, chem_id
@@ -214,8 +217,6 @@
                res, d_dlnRho_const_T, d_dlnT_const_Rho, &
                d_dabar_const_TRho, d_dzbar_const_TRho, &
                ierr)
-         gamma1 = res(i_gamma1)
-         gamma3 = res(i_gamma3)
       end subroutine eos_PT
 
 

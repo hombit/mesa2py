@@ -5,6 +5,8 @@ ctypedef double[7] species_double_array
 cdef extern from 'opacity.h' nogil:
     cdef int _SPECIES
 
+    cdef int NUM_EOS_RESULTS
+
     ctypedef struct Opacity:
         int EOS_HANDLER
         int KAP_HANDLER
@@ -27,7 +29,7 @@ cdef extern from 'opacity.h' nogil:
     cdef void shutdown_Opacity(Opacity*)
     cdef void eos_PT(Opacity*, double, double,
                      double*, double*, double*, double*,
-                     double*, double*,
+                     double*,
                      int*)
     cdef void kap_DT(Opacity*, double, double,
                      double*, double*, double*, int*)
