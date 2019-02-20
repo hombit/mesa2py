@@ -66,6 +66,7 @@ cdef class Opac:
                    &res_view[0],
                    <int*> cnp.PyArray_MultiIter_DATA(it, 6))
             if full_output:
+                # These indexes are grabbed from eos_def
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = res[3]
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = res[4]
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = res[6]
@@ -115,3 +116,4 @@ cdef class Opac:
         if return_grad:
             return kappa, dlnkap_dlnRho, dlnkap_dlnT
         return kappa
+
