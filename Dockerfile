@@ -39,8 +39,8 @@ RUN export MESASDK_ROOT=/mesasdk &&\
     export MESA_DIR=/mesa &&\
     python setup.py buildmesa
 
+env MESASDK_ROOT=/mesasdk
+env MESA_DIR=/mesa
 COPY . /mesa2py
-RUN export MESASDK_ROOT=/mesasdk &&\
-    export MESA_DIR=/mesa &&\
-    python setup.py install &&\
+RUN python setup.py install &&\
     python test.py
