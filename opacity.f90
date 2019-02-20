@@ -220,17 +220,16 @@
       end subroutine eos_PT
 
 
-      subroutine kap_DT(op, Rho, T, &
+      subroutine kap_DT(op, Rho, T, lnfree_e, &
             kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr &
             ) bind(C, name='kap_DT')
          implicit none
          type(Opacity), intent(in) :: op
-         real(kind=8), value :: Rho, T
-         real(kind=8), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
+         real(c_double), value, intent(in) :: Rho, T, lnfree_e
+         real(c_double), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
          integer(c_int), intent(out) :: ierr
-         real(kind=8), parameter :: lnfree_e = 0.0  ! needed for Compton
-         real(kind=8), parameter :: d_lnfree_e_dlnRho = 0.0
-         real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0
+         real(kind=8), parameter :: d_lnfree_e_dlnRho = 0.0  ! needed for Compton
+         real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0  ! needed for Compton
          real(kind=8) :: frac_Type2
 
          

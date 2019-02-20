@@ -24,7 +24,7 @@ void eos_PT(Opacity* op, double Pgas, double T,
 	double*,
 	int* ierr);
 
-void kap_DT(Opacity* op, double Rho, double T,
+void kap_DT(Opacity* op, double Rho, double T, double lnfree_e,
 	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT, int* ierr);
 
 #endif  // OPACITY_H

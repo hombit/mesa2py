@@ -19,6 +19,7 @@ EOSResults = namedtuple(
 
 cdef class Opac:
     cdef Opacity fort_opacity
+    default_lnfree_e = <double> 0.
 
     def __cinit__(self, mesa_dir=None):
         if mesa_dir is not None:
@@ -76,13 +77,15 @@ cdef class Opac:
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = NAN
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = NAN
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN
+            elif (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
             cnp.PyArray_MultiIter_NEXT(it)
         if full_output:
             return rho, EOSResults(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
                                    mu, lnfree_e, grad_ad,)
         return rho
 
-    def kappa(self, rho, temp, return_grad=False):
+    def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):
         cdef tuple base_shape = cnp.broadcast(rho, temp).shape
         kappa = np.empty(base_shape, np.double)
         dlnkap_dlnRho = np.empty(base_shape, np.double)
@@ -90,7 +93,7 @@ cdef class Opac:
         ierr = np.zeros(base_shape, np.int)
         
         cdef cnp.broadcast it = cnp.broadcast(
-            rho, temp,
+            rho, temp, lnfree_e,
             kappa, dlnkap_dlnRho, dlnkap_dlnT,
             ierr
         )
@@ -99,14 +102,15 @@ cdef class Opac:
             kap_DT(&self.fort_opacity,
                         (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],
                         (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],
-                        <double*> cnp.PyArray_MultiIter_DATA(it, 2),
+                        (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0],
                         <double*> cnp.PyArray_MultiIter_DATA(it, 3),
                         <double*> cnp.PyArray_MultiIter_DATA(it, 4),
-                        <int*> cnp.PyArray_MultiIter_DATA(it, 5))
-            if (<int*> cnp.PyArray_MultiIter_DATA(it, 5))[0] != 0:
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
+                        <double*> cnp.PyArray_MultiIter_DATA(it, 5),
+                        <int*> cnp.PyArray_MultiIter_DATA(it, 6))
+            if (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0] = NAN
             cnp.PyArray_MultiIter_NEXT(it)
         if return_grad:
             return kappa, dlnkap_dlnRho, dlnkap_dlnT

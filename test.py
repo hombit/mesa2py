@@ -6,15 +6,17 @@ import numpy as np
 
 from opacity import Opac
 
-opacity = Opac(mesa_dir='/mesa')
+opacity = Opac()
 
 print(opacity.X)
 p = 1e4
 temp = 1e4
 rho = opacity.rho(p, temp)
 print(rho)
-print(opacity.rho(p, temp, True))
+rho, eos = opacity.rho(p, temp, True)
 kappa = opacity.kappa(rho, temp)
 print(kappa)
+kappa_with_free_e = opacity.kappa(rho, temp, eos.lnfree_e)
+print(kappa_with_free_e)
 
 del opacity
