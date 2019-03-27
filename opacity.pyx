@@ -24,7 +24,11 @@ cdef class Opac:
     def __cinit__(self, mesa_dir=None):
         if mesa_dir is not None:
             os.environ['MESA_DIR'] = mesa_dir
-        self.fort_opacity = init_Opacity()
+        for i in range(_SPECIES):
+            self.fort_opacity.XA[i] = 0
+        self.fort_opacity.XA[0] = 0.7
+        self.fort_opacity.XA[1] = 0.3
+        init_Opacity(&self.fort_opacity)
 
     def __dealloc__(self):
         shutdown_Opacity(&self.fort_opacity)

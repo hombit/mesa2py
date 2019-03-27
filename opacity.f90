@@ -2,7 +2,7 @@
       
       module class_opacity
 
-      use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double, c_char
+      use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double, c_char, c_size_t, c_null_char
 
       use const_lib
       use crlibm_lib
@@ -17,7 +17,8 @@
       private
       public :: Opacity, init_Opacity, shutdown_Opacity, &
             eos_PT, kap_DT, &
-            species, num_eos_resuls
+            species, num_eos_resuls, &
+            nuclide_index
 
       
       logical, parameter :: use_cache = .true.
@@ -36,20 +37,41 @@
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
          real(c_double) :: xa(species)
-         real(c_double) :: Y, abar, zbar, z2bar, ye
+         real(c_double) :: X, Y, Z, abar, zbar, z2bar, ye
          type(c_ptr) :: net_iso, chem_id
-         real(c_double) :: X = 0.70
-         real(c_double) :: Z = 0.02
-         real(c_double) :: Zfrac_C = 0.173312d0
-         real(c_double) :: Zfrac_N = 0.053177d0
-         real(c_double) :: Zfrac_O = 0.482398d0
-         real(c_double) :: Zfrac_Ne = 0.098675d0
       end type Opacity
 
 !      private
 !      public :: init_opacity, shutdown_opacity, get_hbar
 
       contains
+
+
+      function nuclide_index(c_nuclei) result(indx) bind(C, name='nuclide_index')
+         implicit none
+         character(c_char), dimension(*), intent(in) :: c_nuclei
+         character(len=:), allocatable :: str
+         integer(c_int) :: indx
+         integer i
+
+         i = 1
+         do
+            if (c_nuclei(i) == c_null_char) exit
+            i = i + 1
+         end do
+
+         i = i - 1
+         allocate(character(len=i) :: str)
+         str = transfer(c_nuclei(1:i), str)
+
+!         type(c_ptr), intent(in) :: c_nuclei
+!         character(kind=c_char), pointer, dimension(:) :: nuclei
+!         integer(kind=c_size_t), intent(in) :: len_nuclei
+!         integer(c_int) :: indx
+!
+!         call c_f_pointer(c_nuclei, nuclei, [len_nuclei])
+         indx = get_nuclide_index(str)
+      end function nuclide_index
 
 
       subroutine init_const()
@@ -63,7 +85,6 @@
             stop 1
          end if
       end subroutine init_const
-
 
       subroutine init_chem()
          implicit none
@@ -113,14 +134,9 @@
          chem_id(o16) = io16; net_iso(io16) = o16
          chem_id(ne20) = ine20; net_iso(ine20) = ne20
          chem_id(mg24) = img24; net_iso(img24) = mg24
-         op%Y = 1 - (op%X + op%Z)               
-         op%xa(h1) = op%X
-         op%xa(he4) = op%Y
-         op%xa(c12) = op%Z * op%Zfrac_C
-         op%xa(n14) = op%Z * op%Zfrac_N
-         op%xa(o16) = op%Z * op%Zfrac_O
-         op%xa(ne20) = op%Z * op%Zfrac_Ne
-         op%xa(species) = 1 - sum(op%xa(1:species-1))
+         op%X = op%xa(h1)
+         op%Y = op%xa(he4)
+         op%Z = 1 - (op%X + op%Y)
          call composition_info( &
                species, chem_id, op%xa, xh, xhe, xz, op%abar, &
                op%zbar, op%z2bar, op%ye, mass_correction, sumx, &
@@ -150,14 +166,15 @@
       end subroutine init_kap
 
 
-      type(Opacity) function init_Opacity() bind(C, name='init_Opacity')
+      subroutine init_Opacity(op) bind(C, name='init_Opacity')
          implicit none
+         type(Opacity), intent(inout) :: op
          
          call init_const
          call init_chem
-         call init_eos(init_opacity)
-         call init_kap(init_opacity)
-      end function init_opacity
+         call init_eos(op)
+         call init_kap(op)
+      end subroutine init_opacity
 
 
       subroutine shutdown_eos(op)
