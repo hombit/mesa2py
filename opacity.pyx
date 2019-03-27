@@ -21,13 +21,38 @@ cdef class Opac:
     cdef Opacity fort_opacity
     default_lnfree_e = <double> 0.
 
-    def __cinit__(self, mesa_dir=None):
+    cdef cnp.ndarray net_iso
+    cdef cnp.ndarray chem_id
+    cdef cnp.ndarray xa
+
+    def __cinit__(self, composition, mesa_dir=None):
         if mesa_dir is not None:
             os.environ['MESA_DIR'] = mesa_dir
-        for i in range(_SPECIES):
-            self.fort_opacity.XA[i] = 0
-        self.fort_opacity.XA[0] = 0.7
-        self.fort_opacity.XA[1] = 0.3
+
+        init_mesa()
+
+        self.fort_opacity.SPECIES = len(composition)
+        self.net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
+        cdef int[:] view_net_iso = self.net_iso
+        self.fort_opacity.NET_ISO = &view_net_iso[0]
+        self.chem_id = np.empty(self.fort_opacity.SPECIES, dtype=np.intc)
+        cdef int[:] view_chem_id = self.chem_id
+        self.fort_opacity.CHEM_ID = &view_chem_id[0]
+        self.xa = np.zeros(self.fort_opacity.SPECIES, dtype=np.double)
+        cdef double[:] view_xa = self.xa
+        self.fort_opacity.XA = &view_xa[0]
+
+        norm = sum(composition.values())
+        composition = {isotope: num_dens / norm for isotope, num_dens in composition.items()}
+
+        for i, (isotope, num_dens) in enumerate(composition.items()):
+            index = nuclide_index(isotope)
+            if index < 0: # nuclide_not_found
+                raise ValueError('Invalid isotope name {}'.format(isotope))
+            self.chem_id[i] = index
+            self.net_iso[index - 1] = i + 1
+            self.xa[i] = num_dens
+
         init_Opacity(&self.fort_opacity)
 
     def __dealloc__(self):

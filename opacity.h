@@ -1,17 +1,20 @@
 #ifndef OPACITY_H
 #define OPACITY_H
 
-
-#include "macros.h"
-
 int NUM_EOS_RESULTS;
+int NUM_CHEM_ISOS_POINTER;
 
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
-	double XA[_SPECIES];
-	double X, Y, Z, ABAR, ZBAR, Z2BAR, YE;
-	int* NET_ISO, CHEM_ID;
+	int SPECIES;
+	double X, Y, Z, XC, XN, XO, XNe, ABAR, ZBAR, Z2BAR, YE;
+	int* NET_ISO;
+	int* CHEM_ID;
+	double* XA;
 } Opacity;
+
+void init_mesa();
+int get_num_chem_isos();
 
 void init_Opacity(Opacity*);
 
