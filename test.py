@@ -6,7 +6,9 @@ import numpy as np
 
 from opacity import Opac
 
-opacity = Opac({b'h1': 0.7, b'he4': 0.3})
+# opacity = Opac({b'h1': 0.7, b'he4': 0.3})
+
+opacity = Opac('solar')
 
 print(opacity.X)
 p = 1e4

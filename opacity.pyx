@@ -31,27 +31,38 @@ cdef class Opac:
 
         init_mesa()
 
-        self.fort_opacity.SPECIES = len(composition)
         self.net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
         cdef int[:] view_net_iso = self.net_iso
         self.fort_opacity.NET_ISO = &view_net_iso[0]
+
+        self.fort_opacity.SPECIES = SOLSIZE if composition == 'solar' else len(composition)
         self.chem_id = np.empty(self.fort_opacity.SPECIES, dtype=np.intc)
-        cdef int[:] view_chem_id = self.chem_id
-        self.fort_opacity.CHEM_ID = &view_chem_id[0]
         self.xa = np.zeros(self.fort_opacity.SPECIES, dtype=np.double)
+        cdef int[:] view_chem_id = self.chem_id
         cdef double[:] view_xa = self.xa
+        self.fort_opacity.CHEM_ID = &view_chem_id[0]
         self.fort_opacity.XA = &view_xa[0]
 
-        norm = sum(composition.values())
-        composition = {isotope: num_dens / norm for isotope, num_dens in composition.items()}
+        if composition == 'solar':
+            get_sol_x(&view_xa[0])
+            get_sol_chem_id(&view_chem_id[0])
 
-        for i, (isotope, num_dens) in enumerate(composition.items()):
-            index = nuclide_index(isotope)
-            if index < 0: # nuclide_not_found
-                raise ValueError('Invalid isotope name {}'.format(isotope))
-            self.chem_id[i] = index
-            self.net_iso[index - 1] = i + 1
-            self.xa[i] = num_dens
+            for i, index in enumerate(self.chem_id):
+                self.net_iso[index - 1] = i + 1
+
+        elif isinstance(composition, dict):
+            norm = sum(composition.values())
+            composition = {isotope: num_dens / norm for isotope, num_dens in composition.items()}
+
+            for i, (isotope, num_dens) in enumerate(composition.items()):
+                index = nuclide_index(isotope)
+                if index < 0: # nuclide_not_found
+                    raise ValueError('Invalid isotope name {}'.format(isotope))
+                self.chem_id[i] = index
+                self.net_iso[index - 1] = i + 1
+                self.xa[i] = num_dens
+        else:
+            raise ValueError('Composition should be solar or dictionary')
 
         init_Opacity(&self.fort_opacity)
 

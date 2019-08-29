@@ -3,6 +3,7 @@
 
 int NUM_EOS_RESULTS;
 int NUM_CHEM_ISOS_POINTER;
+int SOLSIZE;
 
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
@@ -13,6 +14,8 @@ typedef struct {
 	double* XA;
 } Opacity;
 
+void get_sol_x(double*);
+void get_sol_chem_id(int*);
 void init_mesa();
 int get_num_chem_isos();
 

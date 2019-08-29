@@ -17,9 +17,8 @@
       public :: init_mesa, get_num_chem_isos, &
             Opacity, init_Opacity, shutdown_Opacity, &
             eos_PT, kap_DT, num_eos_resuls, &
-            nuclide_index
+            nuclide_index, solsiz, solx, get_sol_x
 
-      
       logical, parameter :: use_cache = .true.
       logical, parameter :: use_Type2_opacities = .false.
       character (len=256), parameter :: kappa_file_prefix = 'gn93'
@@ -29,6 +28,9 @@
       
       integer(c_int), protected, bind(C, name="NUM_EOS_RESULTS") :: &
             num_eos_resuls = num_eos_basic_results
+
+      integer(c_int), protected, bind(C, name="SOLSIZE") :: &
+            solsize = solsiz
 
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
@@ -41,6 +43,25 @@
 !      public :: init_opacity, shutdown_opacity, get_hbar
 
       contains
+
+
+      subroutine get_sol_x(c_sol_x) bind(C, name='get_sol_x')
+          type(c_ptr), value :: c_sol_x
+          real(c_double), pointer, dimension(:) :: sol_x
+          call c_f_pointer(c_sol_x, sol_x, [solsiz])
+          sol_x = solx
+      end subroutine
+
+
+      subroutine get_sol_chem_id(c_chem_id) bind(C, name='get_sol_chem_id')
+          integer i
+          type(c_ptr), value :: c_chem_id
+          integer(c_int), pointer, dimension(:) :: chem_id
+          call c_f_pointer(c_chem_id, chem_id, [solsiz])
+          do i=1, solsiz
+              chem_id(i) = get_nuclide_index(namsol(i))
+          end do
+      end subroutine get_sol_chem_id
 
 
       function nuclide_index(c_nuclei) result(indx) bind(C, name='nuclide_index')
@@ -115,6 +136,7 @@
          call c_f_pointer(op%chem_id, chem_id, [op%species])
          call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
          call c_f_pointer(op%xa, xa, [op%species])
+
 
          call eos_init('mesa', '', '', '', use_cache, ierr)
          if (ierr /= 0) then
@@ -218,6 +240,7 @@
       subroutine init_mesa() bind(C, name='init_mesa')
          call init_const
          call init_chem
+
       end subroutine init_mesa
 
       function get_num_chem_isos() result(n) bind(C, name='get_num_chem_isos')
@@ -239,7 +262,7 @@
       subroutine shutdown_eos(op)
          implicit none      
          type(Opacity), intent(inout) :: op
-         !integer, pointer, dimension(:) :: net_iso, chem_id
+         ! integer, pointer, dimension(:) :: net_iso, chem_id
 
          call free_eos_handle(op%eos_handle)
          call eos_shutdown
