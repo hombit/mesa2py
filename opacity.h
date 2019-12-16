@@ -25,9 +25,12 @@ void shutdown_Opacity(Opacity*);
 
 void eos_PT(Opacity* op, double Pgas, double T,
 	double* Rho, double* log10Rho,
-	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas,
-	double*,
+	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas, double* res,
 	int* ierr);
+
+void eos_DT(Opacity* op, double Rho, double log10Rho, double T, double log10T, double* res,
+            double* d_dlnRho_const_T, double* d_dlnT_const_Rho,
+            double* Pgas, double* Prad, double* energy, double* entropy, int* ierr);
 
 void kap_DT(Opacity* op, double Rho, double T, double lnfree_e,
 	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT, int* ierr);

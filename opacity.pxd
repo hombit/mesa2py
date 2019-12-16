@@ -35,7 +35,8 @@ cdef extern from 'opacity.h' nogil:
                      double*, double*, double*, double*,
                      double*,
                      int*)
+    cdef void eos_DT(Opacity*, double, double, double, double, double*,
+                     double*, double*, double*, double*, double*, double*, int*)
     cdef void kap_DT(Opacity*, double, double, double,
                      double*, double*, double*, int*)
-
     cdef int nuclide_index(char*)
