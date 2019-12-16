@@ -21,10 +21,50 @@ cdef class Opac:
     cdef Opacity fort_opacity
     default_lnfree_e = <double> 0.
 
-    def __cinit__(self, mesa_dir=None):
+    cdef cnp.ndarray net_iso
+    cdef cnp.ndarray chem_id
+    cdef cnp.ndarray xa
+
+    def __cinit__(self, composition, mesa_dir=None):
         if mesa_dir is not None:
             os.environ['MESA_DIR'] = mesa_dir
-        self.fort_opacity = init_Opacity()
+
+        init_mesa()
+
+        self.net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
+        cdef int[:] view_net_iso = self.net_iso
+        self.fort_opacity.NET_ISO = &view_net_iso[0]
+
+        self.fort_opacity.SPECIES = SOLSIZE if composition == 'solar' else len(composition)
+        self.chem_id = np.empty(self.fort_opacity.SPECIES, dtype=np.intc)
+        self.xa = np.zeros(self.fort_opacity.SPECIES, dtype=np.double)
+        cdef int[:] view_chem_id = self.chem_id
+        cdef double[:] view_xa = self.xa
+        self.fort_opacity.CHEM_ID = &view_chem_id[0]
+        self.fort_opacity.XA = &view_xa[0]
+
+        if composition == 'solar':
+            get_sol_x(&view_xa[0])
+            get_sol_chem_id(&view_chem_id[0])
+
+            for i, index in enumerate(self.chem_id):
+                self.net_iso[index - 1] = i + 1
+
+        elif isinstance(composition, dict):
+            norm = sum(composition.values())
+            composition = {isotope: num_dens / norm for isotope, num_dens in composition.items()}
+
+            for i, (isotope, num_dens) in enumerate(composition.items()):
+                index = nuclide_index(isotope)
+                if index < 0: # nuclide_not_found
+                    raise ValueError('Invalid isotope name {}'.format(isotope))
+                self.chem_id[i] = index
+                self.net_iso[index - 1] = i + 1
+                self.xa[i] = num_dens
+        else:
+            raise ValueError('Composition should be solar or dictionary')
+
+        init_Opacity(&self.fort_opacity)
 
     def __dealloc__(self):
         shutdown_Opacity(&self.fort_opacity)

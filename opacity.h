@@ -1,20 +1,25 @@
 #ifndef OPACITY_H
 #define OPACITY_H
 
-
-#include "macros.h"
-
 int NUM_EOS_RESULTS;
+int NUM_CHEM_ISOS_POINTER;
+int SOLSIZE;
 
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
-	double XA[_SPECIES];
-	double Y, ABAR, ZBAR, Z2BAR, YE;
-	int* NET_ISO, CHEM_ID;
-	double X, Z, Zfrac_C, Zfrac_N, Zfrac_O, Zfrac_Ne;
+	int SPECIES;
+	double X, Y, Z, XC, XN, XO, XNe, ABAR, ZBAR, Z2BAR, YE;
+	int* NET_ISO;
+	int* CHEM_ID;
+	double* XA;
 } Opacity;
 
-Opacity init_Opacity();
+void get_sol_x(double*);
+void get_sol_chem_id(int*);
+void init_mesa();
+int get_num_chem_isos();
+
+void init_Opacity(Opacity*);
 
 void shutdown_Opacity(Opacity*);
 
@@ -26,5 +31,7 @@ void eos_PT(Opacity* op, double Pgas, double T,
 
 void kap_DT(Opacity* op, double Rho, double T, double lnfree_e,
 	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT, int* ierr);
+
+int nuclide_index(char* nuclei);
 
 #endif  // OPACITY_H
