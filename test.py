@@ -14,9 +14,6 @@ print(opacity.X)
 p = 1e5
 temp = 1e5
 rho = opacity.rho(p, temp)
-
-# energy, Pgas, Prad, entropy = opacity.energy(rho, temp)
-# print('Energy = ', energy, Pgas, Prad, entropy)
 print(rho)
 rho, eos = opacity.rho(p, temp, True)
 print(eos)

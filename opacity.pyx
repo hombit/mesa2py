@@ -125,53 +125,8 @@ cdef class Opac:
             cnp.PyArray_MultiIter_NEXT(it)
         if full_output:
             return rho, EOSResults(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-                                   mu, lnfree_e, grad_ad, c_p,)
+                                   mu, lnfree_e, grad_ad, c_p)
         return rho
-
-    def energy(self, rho, temp):
-        cdef tuple base_shape = cnp.broadcast(rho, temp).shape
-        log10Rho = np.log10(rho)
-        log10T = np.log10(temp)
-        d_dlnRho_const_T = np.empty(base_shape, np.double)
-        d_dlnT_const_Rho = np.empty(base_shape, np.double)
-
-        Pgas = np.empty(base_shape, np.double)
-        Prad = np.empty(base_shape, np.double)
-        energy = np.empty(base_shape, np.double)
-        entropy = np.empty(base_shape, np.double)
-
-        ierr = np.zeros(base_shape, dtype=np.int)
-
-        res = view.array(shape=(NUM_EOS_RESULTS,), itemsize=sizeof(double), format='d')
-        cdef double[:] res_view = res
-
-        cdef cnp.broadcast it = cnp.broadcast(
-            rho, log10Rho, temp, log10T,
-            d_dlnRho_const_T, d_dlnT_const_Rho,
-            Pgas, Prad, energy, entropy,
-            ierr
-        )
-
-        print(rho, log10Rho, temp, log10T,
-            d_dlnRho_const_T, d_dlnT_const_Rho,
-            Pgas, Prad, energy, entropy,
-            ierr)
-        while cnp.PyArray_MultiIter_NOTDONE(it):
-            eos_DT(&self.fort_opacity,
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0],
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0],
-                   &res_view[0],
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 4),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 5),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 6),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 7),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 8),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 9),
-                   <int*> cnp.PyArray_MultiIter_DATA(it, 10))
-            cnp.PyArray_MultiIter_NEXT(it)
-        return energy, Pgas, Prad, entropy
 
 
     def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):

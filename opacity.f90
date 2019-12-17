@@ -15,7 +15,7 @@ module class_opacity
     private
     public :: init_mesa, get_num_chem_isos, &
             Opacity, init_Opacity, shutdown_Opacity, &
-            eos_PT, eos_DT, kap_DT, num_eos_resuls, &
+            eos_PT, kap_DT, num_eos_resuls, &
             nuclide_index, solsiz, solx, get_sol_x
 
     logical, parameter :: use_cache = .true.
@@ -318,38 +318,6 @@ contains
                 d_dabar_const_TRho, d_dzbar_const_TRho, &
                 ierr)
     end subroutine eos_PT
-
-
-    subroutine eos_DT(op, Rho, log10Rho, T, log10T, res, &
-            d_dlnRho_const_T, d_dlnT_const_Rho, &
-            Pgas, Prad, energy, entropy, ierr &
-            ) bind(C, name = 'eos_DT')
-        implicit none
-        type(Opacity), intent(in) :: op
-        real(c_double), intent(in) :: Rho, log10Rho
-        real(c_double), intent(in) :: T, log10T
-        real(c_double), intent(inout) :: res(num_eos_basic_results)
-        real(c_double), intent(inout), dimension(num_eos_basic_results) :: &
-                d_dlnRho_const_T, d_dlnT_const_Rho
-
-        real(c_double), intent(out) :: Pgas, Prad, energy, entropy
-
-        integer(c_int), intent(out) :: ierr
-
-        integer(c_int), pointer, dimension(:) :: net_iso, chem_id
-        real(c_double), pointer, dimension(:) :: xa
-
-        call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
-        call c_f_pointer(op%chem_id, chem_id, [op%species])
-        call c_f_pointer(op%xa, xa, [op%species])
-
-        call eosDT_get_alt(&
-                op%eos_handle, op%Z, op%X, op%abar, op%zbar, &
-                op%species, chem_id, net_iso, xa, &
-                Rho, log10Rho, T, log10T, &
-                res, d_dlnRho_const_T, d_dlnT_const_Rho, &
-                Pgas, Prad, energy, entropy, ierr)
-    end subroutine eos_DT
 
 
     subroutine kap_DT(op, Rho, T, lnfree_e, &
