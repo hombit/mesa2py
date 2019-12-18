@@ -1,7 +1,7 @@
-FROM python as builder
+FROM python:3.7-stretch
 
-ARG MESASDKVERSION=20180822
-ARG MESAVERSION=10398
+ARG MESASDKVERSION=20190503
+ARG MESAVERSION=11701
 
 RUN ln -sfv /bin/bash /bin/sh
 
@@ -17,7 +17,7 @@ RUN wget --no-verbose -U "" -O /mesasdk.tar.gz http://www.astro.wisc.edu/~townse
     tar -I pigz -xvf /mesasdk.tar.gz &&\
     rm /mesasdk.tar.gz
 
-RUN svn co -r ${MESAVERSION} svn://svn.code.sf.net/p/mesa/code/trunk /mesa
+RUN svn co -r ${MESAVERSION} https://subversion.assembla.com/svn/mesa^mesa/trunk /mesa
 
 # Add -fPIC to utils/makefile_header
 RUN sed -i'' -e 's/FCstatic =/FCstatic = -fPIC/' /mesa/utils/makefile_header
