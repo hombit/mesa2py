@@ -13,7 +13,7 @@ from opacity cimport *
 EOSResults = namedtuple(
     'EOSResults', 
     ('dlnRho_dlnPgas_const_T', 'dlnRho_dlnT_const_Pgas',
-     'mu', 'lnfree_e', 'grad_ad',),
+     'mu', 'lnfree_e', 'grad_ad', 'c_p',),
 )
 
 
@@ -84,6 +84,7 @@ cdef class Opac:
         mu = np.empty(base_shape, np.double)
         lnfree_e = np.empty(base_shape, np.double)
         grad_ad = np.empty(base_shape, np.double)
+        c_p = np.empty(base_shape, np.double)
 
         res = view.array(shape=(NUM_EOS_RESULTS,), itemsize=sizeof(double), format='d')
         cdef double[:] res_view = res
@@ -92,7 +93,7 @@ cdef class Opac:
             pres, temp, rho, log10Rho,
             dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
             ierr,
-            mu, lnfree_e, grad_ad,
+            mu, lnfree_e, grad_ad, c_p
         )
         cdef int i
         while cnp.PyArray_MultiIter_NOTDONE(it):
@@ -110,6 +111,7 @@ cdef class Opac:
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = res[3]
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = res[4]
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = res[6]
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = res[9]
                 if (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
@@ -123,8 +125,9 @@ cdef class Opac:
             cnp.PyArray_MultiIter_NEXT(it)
         if full_output:
             return rho, EOSResults(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-                                   mu, lnfree_e, grad_ad,)
+                                   mu, lnfree_e, grad_ad, c_p)
         return rho
+
 
     def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):
         cdef tuple base_shape = cnp.broadcast(rho, temp).shape

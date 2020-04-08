@@ -345,4 +345,3 @@
 
 
       end module class_opacity
-
