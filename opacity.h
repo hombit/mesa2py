@@ -16,18 +16,17 @@ typedef struct {
 
 void get_sol_x(double*);
 void get_sol_chem_id(int*);
-void init_mesa();
 int get_num_chem_isos();
 
+void init_mesa();
+void shutdown_mesa();
+
 void init_Opacity(Opacity*);
-
 void shutdown_Opacity(Opacity*);
-
 void eos_PT(Opacity* op, double Pgas, double T,
 	double* Rho, double* log10Rho,
 	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas, double* res,
 	int* ierr);
-
 void kap_DT(Opacity* op, double Rho, double T, double lnfree_e,
 	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT, int* ierr);
 

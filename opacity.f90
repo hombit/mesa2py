@@ -90,7 +90,7 @@
       end function nuclide_index
 
 
-      subroutine init_const()
+      subroutine mesa_init_const()
          implicit none
          integer :: ierr
 
@@ -100,21 +100,68 @@
             write(*,*) 'const_init failed'
             stop 1
          end if
-      end subroutine init_const
+      end subroutine mesa_init_const
 
-      subroutine init_chem()
+      subroutine mesa_init_math()
+         call math_init()
+      end subroutine mesa_init_math
+
+      subroutine mesa_init_chem()
          implicit none
          integer :: ierr
-
-         call math_init()
 
          ierr = 0
          call chem_init('isotopes.data', ierr)
          if (ierr /= 0) then
-            write(*,*) 'failed in chem_init'
+            write(*,*) 'chem_init failed'
             stop 1
          end if
-      end subroutine init_chem
+      end subroutine mesa_init_chem
+
+      subroutine mesa_init_eos()
+         implicit none
+         integer :: ierr
+         
+         call eos_init('mesa', '', '', '', use_cache, ierr)
+         if (ierr /= 0) then
+            write(*,*) 'eos_init failed'
+            stop 1
+         end if
+      end subroutine mesa_init_eos
+
+      subroutine mesa_init_kap()
+         implicit none
+         integer :: ierr
+
+         call kap_init(kappa_file_prefix, kappa_CO_prefix, &
+               kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
+               '', '', .false., ierr)
+         if(ierr /= 0) then
+            write(*,*) 'kap_init failed'
+            stop 1
+         end if
+      end subroutine mesa_init_kap
+
+      subroutine init_mesa() bind(C, name='init_mesa')
+         call mesa_init_const()
+         call mesa_init_math()
+         call mesa_init_chem()
+         call mesa_init_eos()
+         call mesa_init_kap()
+      end subroutine init_mesa
+
+      subroutine mesa_shutdown_eos()
+         call eos_shutdown()
+      end subroutine mesa_shutdown_eos
+
+      subroutine mesa_shutdown_kap()
+         call kap_shutdown()
+      end subroutine mesa_shutdown_kap
+
+      subroutine shutdown_mesa() bind(C, name='shutdown_mesa')
+         call mesa_shutdown_eos()
+         call mesa_shutdown_kap()
+      end subroutine shutdown_mesa
 
 
       subroutine init_eos(op)
@@ -135,13 +182,6 @@
          call c_f_pointer(op%chem_id, chem_id, [op%species])
          call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
          call c_f_pointer(op%xa, xa, [op%species])
-
-
-         call eos_init('mesa', '', '', '', use_cache, ierr)
-         if (ierr /= 0) then
-            write(*,*) 'eos_init failed'
-            stop 1
-         end if
          
          op%eos_handle = alloc_eos_handle(ierr)
          if (ierr /= 0) then
@@ -220,11 +260,6 @@
          type(Opacity), intent(inout) :: op
          integer :: ierr
 
-         call kap_init(kappa_file_prefix, kappa_CO_prefix, &
-               kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
-               '', '', .false., ierr)
-         if(ierr/=0) stop 'problem in kap_init'
-         
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
@@ -234,12 +269,6 @@
                ierr)
          if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
       end subroutine init_kap
-
-      subroutine init_mesa() bind(C, name='init_mesa')
-         call init_const
-         call init_chem
-
-      end subroutine init_mesa
 
       function get_num_chem_isos() result(n) bind(C, name='get_num_chem_isos')
           implicit none
@@ -263,7 +292,6 @@
          ! integer, pointer, dimension(:) :: net_iso, chem_id
 
          call free_eos_handle(op%eos_handle)
-         call eos_shutdown
          ! call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
          ! call c_f_pointer(op%chem_id, chem_id, [species])
          ! deallocate(net_iso, chem_id)
@@ -275,7 +303,6 @@
          type(Opacity), intent(inout) :: op
 
          call free_kap_handle(op%kap_handle)
-         call kap_shutdown
       end subroutine shutdown_kap
 
 

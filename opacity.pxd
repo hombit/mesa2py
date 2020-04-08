@@ -27,8 +27,11 @@ cdef extern from 'opacity.h' nogil:
 
     cdef void get_sol_x(double*)
     cdef void get_sol_chem_id(int*)
-    cdef void init_mesa()
     cdef int get_num_chem_isos()
+
+    cdef void init_mesa()
+    cdef void shutdown_mesa()
+
     cdef void init_Opacity(Opacity*)
     cdef void shutdown_Opacity(Opacity*)
     cdef void eos_PT(Opacity*, double, double,

@@ -1,4 +1,5 @@
 import os
+import weakref
 from collections import namedtuple
 
 from cython cimport view
@@ -10,6 +11,26 @@ cimport numpy as cnp
 from opacity cimport *
 
 
+cdef class _CyMesa:
+    def __cinit__(self, mesa_dir=None):
+        if mesa_dir is not None:
+            os.environ['MESA_DIR'] = mesa_dir
+        init_mesa()
+
+    def __dealloc__(self):
+        shutdown_mesa()
+
+
+class Mesa(_CyMesa):
+    obj_ref = None
+
+    def __new__(cls, mesa_dir=None):
+        if cls.obj_ref is None or cls.obj_ref() is None:
+            obj = super().__new__(cls, mesa_dir)
+            cls.obj_ref = weakref.ref(obj)
+        return cls.obj_ref()
+
+
 EOSResults = namedtuple(
     'EOSResults', 
     ('dlnRho_dlnPgas_const_T', 'dlnRho_dlnT_const_Pgas',
@@ -18,6 +39,8 @@ EOSResults = namedtuple(
 
 
 cdef class Opac:
+    cdef object mesa
+
     cdef Opacity fort_opacity
     default_lnfree_e = <double> 0.
 
@@ -25,12 +48,9 @@ cdef class Opac:
     cdef cnp.ndarray chem_id
     cdef cnp.ndarray xa
 
-    def __cinit__(self, composition, mesa_dir=None):
-        if mesa_dir is not None:
-            os.environ['MESA_DIR'] = mesa_dir
-
-        init_mesa()
-
+    def __cinit__(self, composition):
+        self.mesa = Mesa()
+        
         self.net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
         cdef int[:] view_net_iso = self.net_iso
         self.fort_opacity.NET_ISO = &view_net_iso[0]
