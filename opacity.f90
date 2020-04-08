@@ -4,13 +4,13 @@
       use iso_c_binding, only: c_ptr, c_loc, c_f_pointer, c_int, c_double, c_char, c_size_t, c_null_char
 
       use const_lib
-      use crlibm_lib
       use chem_def
       use chem_lib
       use eos_def
       use eos_lib
       use kap_def
       use kap_lib
+      use math_lib
 
       implicit none
       private
@@ -20,7 +20,6 @@
             nuclide_index, solsiz, solx, get_sol_x
 
       logical, parameter :: use_cache = .true.
-      logical, parameter :: use_Type2_opacities = .false.
       character (len=256), parameter :: kappa_file_prefix = 'gn93'
       character (len=256), parameter :: kappa_CO_prefix = 'gn93_co'
       character (len=256), parameter :: kappa_lowT_prefix = &
@@ -107,8 +106,8 @@
          implicit none
          integer :: ierr
 
-         call crlibm_init
-         
+         call math_init()
+
          ierr = 0
          call chem_init('isotopes.data', ierr)
          if (ierr /= 0) then
@@ -223,15 +222,14 @@
 
          call kap_init(kappa_file_prefix, kappa_CO_prefix, &
                kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
-               '', '', ierr)
+               '', '', .false., ierr)
          if(ierr/=0) stop 'problem in kap_init'
          
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
-         ! All these numbers do not matter while use_Type2_opacity is false
-         call kap_set_choices(op%kap_handle, .true., .true., .true., &
-               .true., use_Type2_opacities, &
+         call kap_set_choices(op%kap_handle, .true., .true., .false., &
+               .true., .false., &
                0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
                ierr)
          if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
@@ -314,7 +312,7 @@
 
          call eosPT_get(op%eos_handle, op%Z, op%X, op%abar, op%zbar, &
                op%species, chem_id, net_iso, xa, &
-               Pgas, log10_cr(Pgas), T, log10_cr(T), &
+               Pgas, log10(Pgas), T, log10(T), &
                Rho, log10Rho, &
                dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
                res, d_dlnRho_const_T, d_dlnT_const_Rho, &
@@ -340,7 +338,7 @@
          call kap_get(op%kap_handle, &
                op%zbar, op%X, op%Z, op%Z, &
                op%XC, op%XN, op%XO, op%XNe, &
-               log10_cr(Rho), log10_cr(T), &
+               log10(Rho), log10(T), &
                lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
                frac_Type2, kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
       end subroutine kap_DT

@@ -1,0 +1,11 @@
+version: '2'
+services:
+  mesa-src:
+    build: docker-mesa-src
+    image: hombit/docker-mesa-src:12778-python3.7-stretch
+  mesa2py:
+    build: .
+    container_name: mesa2py
+    image: mesa2py
+    depends_on:
+      - mesa-src

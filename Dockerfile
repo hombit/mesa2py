@@ -1,46 +1,23 @@
-FROM python:3.7-stretch
-
-ARG MESASDKVERSION=20190503
-ARG MESAVERSION=11701
-
-RUN ln -sfv /bin/bash /bin/sh
+FROM hombit/mesa-src:12778-python3.7-stretch
 
 RUN apt-get update &&\
-    apt-get install -y binutils bzip2 libc-dev libx11-dev libz-dev make subversion wget pbzip2 pigz &&\
+    apt-get install -y python3-pip python3-setuptools &&\
     apt-get clean -y &&\
     rm -rf /var/lib/apt/lists/* &&\
     truncate -s 0 /var/log/*log
 
-RUN ln -sf $(which pbzip2) $(which bzip2)
+RUN pip3 install numpy cython
 
-RUN wget --no-verbose -U "" -O /mesasdk.tar.gz http://www.astro.wisc.edu/~townsend/resource/download/mesasdk/mesasdk-x86_64-linux-${MESASDKVERSION}.tar.gz &&\
-    tar -I pigz -xvf /mesasdk.tar.gz &&\
-    rm /mesasdk.tar.gz
-
-RUN svn co -r ${MESAVERSION} https://subversion.assembla.com/svn/mesa^mesa/trunk /mesa
-
-# Add -fPIC to utils/makefile_header
 RUN sed -i'' -e 's/FCstatic =/FCstatic = -fPIC/' /mesa/utils/makefile_header
 RUN echo "SPECIAL_C_FLAGS = -fPIC" >> /mesa/utils/makefile_header
-# Add -fPIC to crlibm/make/makefile
-RUN sed -i'' -e 's/COMPILE_C = $(CC)/COMPILE_C = $(CC) -fPIC/' /mesa/crlibm/make/makefile
-
-#WORKDIR /mesa
-#RUN export MESASDK_ROOT=/mesasdk &&\
-#    export MESA_DIR=/mesa &&\
-#    source /mesasdk/bin/mesasdk_init.sh &&\
-#    ./install_mods_in_parallel
-
-RUN pip install numpy cython
-
-COPY call_mesa_script.sh setup.py /mesa2py/
-WORKDIR /mesa2py
-RUN export MESASDK_ROOT=/mesasdk &&\
-    export MESA_DIR=/mesa &&\
-    python setup.py buildmesa
 
 env MESASDK_ROOT=/mesasdk
 env MESA_DIR=/mesa
+
+COPY call_mesa_script.sh setup.py /mesa2py/
+WORKDIR /mesa2py
+RUN python3 setup.py buildmesa
+
 COPY . /mesa2py
-RUN python setup.py install
-RUN python test.py
+RUN python3 setup.py install
+RUN python3 test.py

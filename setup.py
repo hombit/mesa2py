@@ -15,7 +15,10 @@ MESASDK_ROOT = os.path.abspath(
     os.environ.get('MESASDK_ROOT', '/Applications/mesasdk')
 )
 MESASDK_INCLUDE = os.path.join(MESASDK_ROOT, 'include')
-MESASDK_LIB = os.path.join(MESASDK_ROOT, 'lib')
+MESASDK_LIBS = [
+    os.path.join(MESASDK_ROOT, 'lib'),
+    os.path.join(MESASDK_ROOT, 'math-slots/default/lib')
+]
 MESA_DIR = os.path.abspath(
     os.environ.get('MESA_DIR', './mesa/')
 )
@@ -117,14 +120,15 @@ def main():
         name='opacity',
         sources=['opacity.f90', 'opacity.pyx'],
         include_dirs=[MESASDK_INCLUDE, MESA_INCLUDE, np.get_include()],
-        library_dirs=[MESASDK_LIB, MESA_LIB],
+        library_dirs=MESASDK_LIBS + [MESA_LIB],
         extra_compile_args=['-fopenmp'],
         extra_link_args=[
-            '-lgomp',  # system
-            '-llapack', '-lblas',  # MESA SDK
-            '-lnet', '-leos', '-lkap', '-lrates', '-lchem', '-linterp_2d',  # MESA
-                '-linterp_1d', '-lnum', '-lf2crlibm', '-lmtx', '-lconst',
-                '-lutils', '-lcrlibm'
+            # MESA SDK:
+            '-lcrlibm', '-lcrmath', '-lhdf5', '-lhdf5_fortran', '-lgomp',
+            '-llapack', '-lblas',
+            # MESA:
+            '-lnet', '-leos', '-lkap', '-lrates', '-lchem', '-linterp_2d',
+            '-linterp_1d', '-lnum', '-lmath', '-lmtx', '-lconst', '-lutils',
         ],
     )]
 
