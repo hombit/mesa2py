@@ -1,6 +1,6 @@
 import os
 import weakref
-from collections import namedtuple
+from collections import OrderedDict, namedtuple
 
 from cython cimport view
 from libc.math cimport NAN
@@ -11,7 +11,7 @@ cimport numpy as cnp
 from opacity cimport *
 
 
-cdef class _CyMesa:
+cdef class _Mesa:
     def __cinit__(self, mesa_dir=None):
         if mesa_dir is not None:
             os.environ['MESA_DIR'] = mesa_dir
@@ -21,7 +21,7 @@ cdef class _CyMesa:
         shutdown_mesa()
 
 
-class Mesa(_CyMesa):
+class Mesa(_Mesa):
     obj_ref = None
 
     def __new__(cls, mesa_dir=None):
@@ -38,7 +38,7 @@ EOSResults = namedtuple(
 )
 
 
-cdef class Opac:
+cdef class _Opac:
     cdef object mesa
 
     cdef Opacity fort_opacity
@@ -69,10 +69,11 @@ cdef class Opac:
 
             for i, index in enumerate(self.chem_id):
                 self.net_iso[index - 1] = i + 1
-
-        elif isinstance(composition, dict):
-            norm = sum(composition.values())
-            composition = {isotope: num_dens / norm for isotope, num_dens in composition.items()}
+        else:
+            try:
+                composition = dict(composition)
+            except ValueError as e:
+                raise ValueError('Composition should be "solar" or convertible to dict') from e
 
             for i, (isotope, num_dens) in enumerate(composition.items()):
                 index = nuclide_index(isotope)
@@ -81,8 +82,6 @@ cdef class Opac:
                 self.chem_id[i] = index
                 self.net_iso[index - 1] = i + 1
                 self.xa[i] = num_dens
-        else:
-            raise ValueError('Composition should be solar or dictionary')
 
         init_Opacity(&self.fort_opacity)
 
@@ -179,4 +178,37 @@ cdef class Opac:
         if return_grad:
             return kappa, dlnkap_dlnRho, dlnkap_dlnT
         return kappa
+
+
+def str2bytes(s):
+    if isinstance(s, bytes):
+        return s
+    if isinstance(s, str):
+        return s.encode('ascii')
+    raise ValueError('Value ({}) must be str or bytes, not {}'.format(s, type(s)))
+
+
+class Opac(_Opac):
+    obj_refs = weakref.WeakValueDictionary()
+
+    @staticmethod
+    def normalize_composition(c):
+        if isinstance(c, str):
+            return c
+        try:
+            d = OrderedDict(c)
+        except ValueError as e:
+            raise ValueError('Composition must be str or convertible to dict') from e
+        norm = sum(d.values())
+        t = tuple((str2bytes(isotope), num_dens / norm) for isotope, num_dens in d.items())
+        return t
+
+    def __new__(cls, composition):
+        composition = cls.normalize_composition(composition)
+
+        if composition not in cls.obj_refs:
+            obj = super().__new__(cls, composition)
+            cls.obj_refs[composition] = obj
+        
+        return cls.obj_refs[composition]
 

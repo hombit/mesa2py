@@ -8,7 +8,8 @@ import numpy as np
 from opacity import Mesa, Opac
 
 ops = [
-    Opac({b'h1': 0.7, b'he4': 0.3}),
+    Opac({b'he4': 1.0}),
+    Opac({'h1': 1.0, 'h2': 1e-3}),
     Opac('solar'),
 ]
 
@@ -25,5 +26,10 @@ for opacity in ops:
     kappa_with_free_e = opacity.kappa(rho, temp, eos.lnfree_e)
     print(f'kappa with free e = {kappa_with_free_e}')
 
-del ops[1]
-del ops[0]
+del ops
+
+ops = [Opac('solar') for _ in range(1 << 10)]
+del ops
+
+ops = [Opac({'h1': 1.0}) for _ in range(1 << 10)]
+del ops
