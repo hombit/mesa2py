@@ -139,6 +139,7 @@ cdef class _Opac:
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = NAN
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = NAN
                     (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = NAN
             elif (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
                 (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
             cnp.PyArray_MultiIter_NEXT(it)
