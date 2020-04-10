@@ -18,6 +18,8 @@ COPY call_mesa_script.sh setup.py /mesa2py/
 WORKDIR /mesa2py
 RUN python3 setup.py buildmesa
 
-COPY . /mesa2py
+COPY opacity.* /mesa2py/
 RUN python3 setup.py install
+
+COPY test.py /mesa2py/
 RUN python3 test.py
