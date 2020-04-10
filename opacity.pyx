@@ -1,3 +1,4 @@
+import math as m
 import os
 import weakref
 from collections import OrderedDict, namedtuple
@@ -44,22 +45,22 @@ cdef class _Opac:
     cdef Opacity fort_opacity
     default_lnfree_e = <double> 0.
 
-    cdef cnp.ndarray net_iso
-    cdef cnp.ndarray chem_id
-    cdef cnp.ndarray xa
+    cdef cnp.ndarray _net_iso
+    cdef cnp.ndarray _chem_id
+    cdef cnp.ndarray _xa
 
     def __cinit__(self, composition):
         self.mesa = Mesa()
         
-        self.net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
-        cdef int[:] view_net_iso = self.net_iso
+        self._net_iso = np.zeros(get_num_chem_isos(), dtype=np.intc)
+        cdef int[:] view_net_iso = self._net_iso
         self.fort_opacity.NET_ISO = &view_net_iso[0]
 
         self.fort_opacity.SPECIES = SOLSIZE if composition == 'solar' else len(composition)
-        self.chem_id = np.empty(self.fort_opacity.SPECIES, dtype=np.intc)
-        self.xa = np.zeros(self.fort_opacity.SPECIES, dtype=np.double)
-        cdef int[:] view_chem_id = self.chem_id
-        cdef double[:] view_xa = self.xa
+        self._chem_id = np.empty(self.fort_opacity.SPECIES, dtype=np.intc)
+        self._xa = np.zeros(self.fort_opacity.SPECIES, dtype=np.double)
+        cdef int[:] view_chem_id = self._chem_id
+        cdef double[:] view_xa = self._xa
         self.fort_opacity.CHEM_ID = &view_chem_id[0]
         self.fort_opacity.XA = &view_xa[0]
 
@@ -67,8 +68,8 @@ cdef class _Opac:
             get_sol_x(&view_xa[0])
             get_sol_chem_id(&view_chem_id[0])
 
-            for i, index in enumerate(self.chem_id):
-                self.net_iso[index - 1] = i + 1
+            for i, index in enumerate(self._chem_id):
+                self._net_iso[index - 1] = i + 1
         else:
             try:
                 composition = dict(composition)
@@ -79,9 +80,9 @@ cdef class _Opac:
                 index = nuclide_index(isotope)
                 if index < 0: # nuclide_not_found
                     raise ValueError('Invalid isotope name {}'.format(isotope))
-                self.chem_id[i] = index
-                self.net_iso[index - 1] = i + 1
-                self.xa[i] = num_dens
+                self._chem_id[i] = index
+                self._net_iso[index - 1] = i + 1
+                self._xa[i] = num_dens
 
         init_Opacity(&self.fort_opacity)
 
@@ -91,6 +92,18 @@ cdef class _Opac:
     @property
     def X(self):
         return self.fort_opacity.X
+
+    @property
+    def net_iso(self):
+        return self._net_iso.copy()
+
+    @property
+    def chem_id(self):
+        return self._chem_id.copy()
+
+    @property
+    def xa(self):
+        return self._xa.copy()
 
     def rho(self, pres, temp, full_output=False):
         cdef tuple base_shape = cnp.broadcast(pres, temp).shape
@@ -189,6 +202,12 @@ def str2bytes(s):
     raise ValueError('Value ({}) must be str or bytes, not {}'.format(s, type(s)))
 
 
+def signif(x, p):
+    """Inspired by https://stackoverflow.com/a/59888924/5437597"""
+    mags = 10 ** (p - m.floor(m.log10(x)))
+    return round(x * mags) / mags
+
+
 class Opac(_Opac):
     obj_refs = weakref.WeakValueDictionary()
 
@@ -200,8 +219,19 @@ class Opac(_Opac):
             d = OrderedDict(c)
         except ValueError as e:
             raise ValueError('Composition must be str or convertible to dict') from e
+
+        if any(map(lambda x: x < 0, d.values())):
+            raise ValueError('All composition values must be non-negative')
+        
+        bytes_isotopes = map(str2bytes, d)
+        
         norm = sum(d.values())
-        t = tuple((str2bytes(isotope), num_dens / norm) for isotope, num_dens in d.items())
+        if norm == 0:
+            raise ValueError('At least on composition value must be positive')
+        normalized_dens = (num_dens / norm for num_dens in d.values())
+        rounded_dens = (signif(x, 12) for x in normalized_dens)
+        
+        t = tuple((isotope, num_dens) for isotope, num_dens in zip(bytes_isotopes, rounded_dens) if num_dens > 0)
         return t
 
     def __new__(cls, composition):
