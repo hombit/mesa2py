@@ -106,12 +106,13 @@ cdef class _Opac:
         return self._xa.copy()
 
     def rho(self, pres, temp, full_output=False):
+        """Density from gas pressure and temperature"""
         cdef tuple base_shape = cnp.broadcast(pres, temp).shape
         rho = np.empty(base_shape, np.double)
         log10Rho = np.empty(base_shape, np.double)
         dlnRho_dlnPgas_const_T = np.empty(base_shape, np.double)
         dlnRho_dlnT_const_Pgas = np.empty(base_shape, np.double)
-        ierr = np.zeros(base_shape, dtype=np.int)
+        ierr = np.zeros(base_shape, dtype=np.intc)
 
         mu = np.empty(base_shape, np.double)
         lnfree_e = np.empty(base_shape, np.double)
@@ -167,7 +168,7 @@ cdef class _Opac:
         kappa = np.empty(base_shape, np.double)
         dlnkap_dlnRho = np.empty(base_shape, np.double)
         dlnkap_dlnT = np.empty(base_shape, np.double)
-        ierr = np.zeros(base_shape, np.int)
+        ierr = np.zeros(base_shape, np.intc)
         
         cdef cnp.broadcast it = cnp.broadcast(
             rho, temp, lnfree_e,
