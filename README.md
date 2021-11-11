@@ -4,10 +4,17 @@ It covers only `eos` and `kappa` modules from [MESA code](http://mesa.sourceforg
 
 ### Installation using Docker
 
-Just build a docker image
+YOu can use the latest pre-build Docker image:
+
+```shell
+$ docker run --rm -ti ghcr.io/hombit/mesa2py
+```
+
+Or build a docker image yourself
 
 ``` shell
-$ cd ~/mesa2py
+$ git clone https://github.com/hombit/mesa2py
+$ cd mesa2py
 $ docker build -t mesa2py .
 ```
 
