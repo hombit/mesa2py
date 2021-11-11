@@ -1,4 +1,4 @@
-FROM hombit/mesa-src:12778-python3.7-stretch
+FROM ghcr.io/hombit/mesa-src:12778-python3.7-stretch
 
 RUN apt-get update &&\
     apt-get install -y python3-pip python3-setuptools &&\
