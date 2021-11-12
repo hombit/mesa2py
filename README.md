@@ -10,7 +10,7 @@ You can use the latest pre-build Docker image:
 $ docker run --rm -ti ghcr.io/hombit/mesa2py
 ```
 
-Or build a docker image yourself
+Or build a docker image by yourself
 
 ``` shell
 $ git clone https://github.com/hombit/mesa2py
