@@ -172,8 +172,9 @@
                sumx, xh, xhe, xz, mass_correction, dmc_dx(op%species)
          integer(c_int), pointer, dimension(:) :: chem_id, net_iso
          real(c_double), pointer, dimension(:) :: xa
+         integer :: ihe6, ihe7, ihe8, ihe9, ihe10
          integer, dimension(3) :: ih_array
-         integer, dimension(2) :: ihe_array
+         integer, dimension(7) :: ihe_array
          integer, dimension(8) :: ic_array
          integer, dimension(9) :: in_array
          integer, dimension(8) :: io_array
@@ -196,8 +197,14 @@
          op%XO = 0
          op%XNe = 0
 
+         ihe6 = get_nuclide_index('he6')
+         ihe7 = get_nuclide_index('he7')
+         ihe8 = get_nuclide_index('he8')
+         ihe9 = get_nuclide_index('he9')
+         ihe10 = get_nuclide_index('he10')
+
          ih_array = (/ ih1, ih2, ih3 /)
-         ihe_array = (/ ihe3, ihe4 /)
+         ihe_array = (/ ihe3, ihe4, ihe6, ihe7, ihe8, ihe9, ihe10 /)
          ic_array = (/ ic9, ic10, ic11, ic12, ic13, ic14, ic15, ic16 /)
          in_array = (/ in12, in13, in14, in15, in16, in17, in18, in19, in20 /)
          io_array = (/ io13, io14, io15, io16, io17, io18, io19, io20 /)

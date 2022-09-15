@@ -94,6 +94,14 @@ cdef class _Opac:
         return self.fort_opacity.X
 
     @property
+    def Y(self):
+        return self.fort_opacity.Y
+
+    @property
+    def Z(self):
+        return self.fort_opacity.Z
+
+    @property
     def net_iso(self):
         return self._net_iso.copy()
 
