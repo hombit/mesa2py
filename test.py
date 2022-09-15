@@ -59,6 +59,26 @@ class OpacUnitTestCase(unittest.TestCase):
         [
             param(
                 composition={'h1': 1.0},
+            ),
+            param(
+                composition={'he4': 1.0},
+            ),
+            param(
+                composition={'h1': 1.0, 'he4': 1.0, 'c12': 0.1},
+            ),
+            param(
+                composition='solar',
+            ),
+        ]
+    )
+    def test_XYZ(self, composition):
+        opac = Opac(composition)
+        assert_allclose(opac.X + opac.Y + opac.Z, 1.0, atol=1e-12, rtol=0)
+
+    @parameterized.expand(
+        [
+            param(
+                composition={'h1': 1.0},
                 p=1e3,
                 t=1e4,
                 rho=7.75826e-10,
