@@ -213,6 +213,9 @@ def str2bytes(s):
 
 def signif(x, p):
     """Inspired by https://stackoverflow.com/a/59888924/5437597"""
+    # We know that x is non-negative and finite
+    if x == 0:
+        return 0
     mags = 10 ** (p - m.floor(m.log10(x)))
     return round(x * mags) / mags
 
@@ -229,14 +232,18 @@ class Opac(_Opac):
         except ValueError as e:
             raise ValueError('Composition must be str or convertible to dict') from e
 
-        if any(map(lambda x: x < 0, d.values())):
-            raise ValueError('All composition values must be non-negative')
+        for isotope, num_dens in d.items():
+            if num_dens >= 0 and not m.isinf(num_dens):
+                continue
+            raise ValueError(
+                f'All composition values must be finite and non-negative, but {isotope} has number density {num_dens}'
+            )
         
         bytes_isotopes = map(str2bytes, d)
         
         norm = sum(d.values())
         if norm == 0:
-            raise ValueError('At least on composition value must be positive')
+            raise ValueError('At least one composition value must be positive')
         normalized_dens = (num_dens / norm for num_dens in d.values())
         rounded_dens = (signif(x, 12) for x in normalized_dens)
         
