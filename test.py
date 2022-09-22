@@ -100,10 +100,10 @@ class OpacUnitTestCase(unittest.TestCase):
             param(
                 composition={'he4': 1.0},
                 p=1e3,
-                t=1e4,
-                rho=4.802586e-09,
-                kappa=0.0007247588733323767,
-                eos=EOSResults(1.001195, -1.036848, 3.993066, -7.424327, 0.28037, 86625632.0),
+                t=3e4,
+                rho=7.76229824e-10,
+                kappa=0.22766244,
+                eos=EOSResults(1.02917524, -1.69374361, 1.93590453, -1.31933614, 0.22034105, 5.9938266e+09),
             ),
             param(
                 composition='solar',
