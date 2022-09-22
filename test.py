@@ -50,6 +50,18 @@ class OpacUnitTestCase(unittest.TestCase):
         with self.assertRaises(ValueError):
             Opac({'h1': 1.0, 'he4': -0.1})
 
+    def test_all_zero_dens(self):
+        with self.assertRaises(ValueError):
+            Opac({'h1': 0.0, 'he4': 0.0})
+
+    def test_inf_zero_dens(self):
+        with self.assertRaises(ValueError):
+            Opac({'h1': 1.0, 'he4': np.inf})
+
+    def test_nan_zero_dens(self):
+        with self.assertRaises(ValueError):
+            Opac({'h1': 1.0, 'he4': np.nan})
+
     def test_cache(self):
         n = 1024
         ops = [Opac('solar') for _ in range(n)]
