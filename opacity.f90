@@ -20,8 +20,8 @@
             nuclide_index, solsiz, solx, get_sol_x
 
       logical, parameter :: use_cache = .true.
-      character (len=256), parameter :: kappa_file_prefix = 'gn93'
-      character (len=256), parameter :: kappa_CO_prefix = 'gn93_co'
+      character (len=256), parameter :: kappa_file_prefix = 'gs98'
+      character (len=256), parameter :: kappa_CO_prefix = 'gs98_co'
       character (len=256), parameter :: kappa_lowT_prefix = &
             'lowT_fa05_gs98'
       

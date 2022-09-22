@@ -94,7 +94,7 @@ class OpacUnitTestCase(unittest.TestCase):
                 p=1e3,
                 t=1e4,
                 rho=7.75826e-10,
-                kappa=23.51589,
+                kappa=23.521732,
                 eos=EOSResults(1.122646, -3.244283, 0.644622, -0.57993, 0.077202, 5.751599e+09),
             ),
             param(
@@ -110,7 +110,7 @@ class OpacUnitTestCase(unittest.TestCase):
                 p=1e3,
                 t=1e4,
                 rho=1.024002e-09,
-                kappa=18.259231,
+                kappa=18.345603,
                 eos=EOSResults(1.114417, -3.092285, 0.847222, -0.902434, 0.078645, 4.060632e+09),
             ),
         ]
