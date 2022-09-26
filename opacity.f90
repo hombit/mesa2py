@@ -132,10 +132,15 @@
       subroutine mesa_init_kap()
          implicit none
          integer :: ierr
+         real(kind=8) :: kap_blend_logT_upper_bdy, kap_blend_logT_lower_bdy
+
+         kap_blend_logT_upper_bdy = 3.88d0  ! default
+         kap_blend_logT_lower_bdy = 3.80d0  ! default
 
          call kap_init(kappa_file_prefix, kappa_CO_prefix, &
-               kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
-               '', '', .false., ierr)
+                 kappa_lowT_prefix, kap_blend_logT_upper_bdy, &
+                 kap_blend_logT_lower_bdy, use_cache, &
+                 '', '', .false., ierr)
          if(ierr /= 0) then
             write(*,*) 'kap_init failed'
             stop 1
