@@ -1,10 +1,6 @@
-FROM ghcr.io/hombit/mesa-src:12778-python3.7-stretch
-
-RUN apt-get update &&\
-    apt-get install -y python3-pip python3-setuptools &&\
-    apt-get clean -y &&\
-    rm -rf /var/lib/apt/lists/* &&\
-    truncate -s 0 /var/log/*log
+# Set it from docker-compose / docker build
+ARG PYTHON_VERSION=3.10
+FROM ghcr.io/hombit/mesa-src:22.05-python${PYTHON_VERSION}-bullseye
 
 RUN pip3 install numpy cython
 
@@ -13,6 +9,10 @@ RUN echo "SPECIAL_C_FLAGS = -fPIC" >> /mesa/utils/makefile_header
 
 env MESASDK_ROOT=/mesasdk
 env MESA_DIR=/mesa
+
+RUN useradd -ms /bin/bash mesa
+RUN chown -R mesa:mesa /mesa
+USER mesa
 
 COPY call_mesa_script.sh setup.py /mesa2py/
 WORKDIR /mesa2py

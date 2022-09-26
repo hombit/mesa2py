@@ -393,7 +393,7 @@
          ! We do not need Type2 opacities which use Zbase for CN abundance
          real(kind=8), parameter :: Zbase = -1.0_dp
 
-         call kap_get(op%kap_handle, &
+         call kap_get(op%kap_handle, op%species, &
                op%zbar, op%X, op%Z, Zbase, &
                op%XC, op%XN, op%XO, op%XNe, &
                log10(Rho), log10(T), &

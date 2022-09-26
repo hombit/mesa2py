@@ -38,13 +38,17 @@ def cd(path):
         os.chdir(old_path)
 
 
-def compile_util(name, tar, dest):
+def compile_util(name, *, tar, dest, shell=None):
+    if shell is None:
+        base_popenargs = []
+    else:
+        base_popenargs = [shell]
     with TemporaryDirectory() as src:
         with tarfile.open(tar) as tar:
             tar.extractall(src)
         with cd(os.path.join(src, os.listdir(src)[0])):
-            check_call(['./configure'])
-            check_call(['make', name])
+            check_call(base_popenargs + ['./configure'])
+            check_call(base_popenargs + ['make', name])
             shutil.move(name, dest)
 
 
@@ -59,8 +63,8 @@ def get_build_env(path=None):
 def build_mesa(clean=True):
     call_mesa_script_sh = os.path.abspath('./call_mesa_script.sh')
     with cd(MESA_DIR), TemporaryDirectory() as tmp_path:
-        compile_util('ndiff', './utils/ndiff-2.00.tar.gz', tmp_path)
-        compile_util('makedepf90', './utils/makedepf90-2.8.8.tar.gz', tmp_path)
+        compile_util(name='ndiff', tar='./utils/ndiff-2.00.tar.gz', dest=tmp_path, shell=call_mesa_script_sh)
+        compile_util(name='makedepf90', tar='./utils/makedepf90-2.8.8.tar.gz', dest=tmp_path, shell=call_mesa_script_sh)
         env = get_build_env(tmp_path)
         if clean:
             check_call([call_mesa_script_sh, './clean'], env=env)

@@ -4,11 +4,13 @@ services:
     build:
       context: docker-mesa-src
       args:
-        - PYTHON_VERSION=3.7
-    image: ghcr.io/hombit/mesa-src:22.05-python3.7-bullseye
+        - PYTHON_VERSION=3.10
+    image: ghcr.io/hombit/mesa-src:22.05-python3.10-bullseye
   mesa2py:
-    build: .
-    container_name: mesa2py
-    image: mesa2py
+    build:
+      context: .
+      args:
+        - PYTHON_VERSION=3.10
+    image: ghcr.io/hombit/mesa2py:latest
     depends_on:
       - mesa-src
