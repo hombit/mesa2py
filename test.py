@@ -113,6 +113,14 @@ class OpacUnitTestCase(unittest.TestCase):
                 kappa=18.345603,
                 eos=EOSResults(1.114417, -3.092285, 0.847222, -0.902434, 0.078645, 4.060632e+09),
             ),
+            param(
+                composition='solar',
+                p=1e3,
+                t=10**3.84,  # inside lowT and normal opacity tables blending interval
+                rho=2.22718465e-09,
+                kappa=0.26554388,
+                eos=EOSResults(1.00607563, -1.15243794, 1.2775947, -4.65811899, 0.18233674, 4.20004691e+08),
+            ),
         ]
     )
     def test_regression(self, composition, p, t, rho, kappa, eos):

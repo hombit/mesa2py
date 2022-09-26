@@ -132,10 +132,8 @@
       subroutine mesa_init_kap()
          implicit none
          integer :: ierr
-         real(kind=8) :: kap_blend_logT_upper_bdy, kap_blend_logT_lower_bdy
-
-         kap_blend_logT_upper_bdy = 3.88d0  ! default
-         kap_blend_logT_lower_bdy = 3.80d0  ! default
+         real(kind=8), parameter :: kap_blend_logT_upper_bdy = 3.88_dp  ! default
+         real(kind=8), parameter :: kap_blend_logT_lower_bdy = 3.80_dp  ! default
 
          call kap_init(kappa_file_prefix, kappa_CO_prefix, &
                  kappa_lowT_prefix, kap_blend_logT_upper_bdy, &
