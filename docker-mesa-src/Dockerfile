@@ -9,7 +9,7 @@ ARG ZENODOURL=https://zenodo.org/record/6547951/files/mesa-${MESAVERSION}.zip?do
 RUN ln -sfv /bin/bash /bin/sh
 
 RUN apt-get update &&\
-    apt-get install -y binutils bzip2 libc-dev libx11-dev libz-dev make wget &&\
+    apt-get install -y binutils bzip2 libc-dev libx11-dev libz-dev make wget tcsh &&\
     apt-get clean -y &&\
     rm -rf /var/lib/apt/lists/* &&\
     truncate -s 0 /var/log/*log
