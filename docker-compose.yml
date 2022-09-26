@@ -1,8 +1,11 @@
 version: '2'
 services:
   mesa-src:
-    build: docker-mesa-src
-    image: hombit/docker-mesa-src:12778-python3.7-stretch
+    build:
+      context: docker-mesa-src
+      args:
+        - PYTHON_VERSION=3.7
+    image: ghcr.io/hombit/mesa-src:22.05-python3.7-bullseye
   mesa2py:
     build: .
     container_name: mesa2py
