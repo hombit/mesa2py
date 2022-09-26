@@ -20,8 +20,8 @@
             nuclide_index, solsiz, solx, get_sol_x
 
       logical, parameter :: use_cache = .true.
-      character (len=256), parameter :: kappa_file_prefix = 'gn93'
-      character (len=256), parameter :: kappa_CO_prefix = 'gn93_co'
+      character (len=256), parameter :: kappa_file_prefix = 'gs98'
+      character (len=256), parameter :: kappa_CO_prefix = 'gs98_co'
       character (len=256), parameter :: kappa_lowT_prefix = &
             'lowT_fa05_gs98'
       
@@ -132,10 +132,13 @@
       subroutine mesa_init_kap()
          implicit none
          integer :: ierr
+         real(kind=8), parameter :: kap_blend_logT_upper_bdy = 3.88_dp  ! default
+         real(kind=8), parameter :: kap_blend_logT_lower_bdy = 3.80_dp  ! default
 
          call kap_init(kappa_file_prefix, kappa_CO_prefix, &
-               kappa_lowT_prefix, 0.0_dp, 0.0_dp, use_cache, &
-               '', '', .false., ierr)
+                 kappa_lowT_prefix, kap_blend_logT_upper_bdy, &
+                 kap_blend_logT_lower_bdy, use_cache, &
+                 '', '', .false., ierr)
          if(ierr /= 0) then
             write(*,*) 'kap_init failed'
             stop 1
@@ -267,13 +270,33 @@
          type(Opacity), intent(inout) :: op
          integer :: ierr
 
+         logical, parameter :: cubic_interpolation_in_X = .true.
+         logical, parameter :: cubic_interpolation_in_Z = .true.
+         logical, parameter :: include_electron_conduction = .true.
+         ! We are not going to use Zbase which is for CN abundance
+         logical, parameter :: use_Zbase_for_Type1 = .false.
+         ! We don not need Type2 opacities, which are useful
+         ! for CN-rich composition only.
+         ! All Type2 variables are not used
+         logical, parameter :: use_Type2_opacities = .false.
+         real(kind=8), parameter :: kap_Type2_full_off_X = 0.71_dp
+         real(kind=8), parameter :: kap_Type2_full_on_X = 0.70_dp
+         real(kind=8), parameter :: kap_Type2_full_off_dZ = 0.001_dp
+         real(kind=8), parameter :: kap_Type2_full_on_dZ = 0.01_dp
+
+
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
-         call kap_set_choices(op%kap_handle, .true., .true., .false., &
-               .true., .false., &
-               0.71_dp, 0.70_dp, 0.001_dp, 0.01_dp, &
+
+         call kap_set_choices( &
+               op%kap_handle, cubic_interpolation_in_X, cubic_interpolation_in_Z, &
+               include_electron_conduction, &
+               use_Zbase_for_Type1, use_Type2_opacities, &
+               kap_Type2_full_off_X, kap_Type2_full_on_X, &
+               kap_Type2_full_off_dZ, kap_Type2_full_on_dZ, &
                ierr)
+
          if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
       end subroutine init_kap
 
@@ -367,10 +390,11 @@
          real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0  ! needed for Compton
          real(kind=8) :: frac_Type2
 
-         
+         ! We do not need Type2 opacities which use Zbase for CN abundance
+         real(kind=8), parameter :: Zbase = -1.0_dp
 
          call kap_get(op%kap_handle, &
-               op%zbar, op%X, op%Z, op%Z, &
+               op%zbar, op%X, op%Z, Zbase, &
                op%XC, op%XN, op%XO, op%XNe, &
                log10(Rho), log10(T), &
                lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &

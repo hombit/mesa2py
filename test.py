@@ -94,24 +94,32 @@ class OpacUnitTestCase(unittest.TestCase):
                 p=1e3,
                 t=1e4,
                 rho=7.75826e-10,
-                kappa=23.51589,
+                kappa=23.521732,
                 eos=EOSResults(1.122646, -3.244283, 0.644622, -0.57993, 0.077202, 5.751599e+09),
             ),
             param(
                 composition={'he4': 1.0},
                 p=1e3,
-                t=1e4,
-                rho=4.802586e-09,
-                kappa=0.0007247588733323767,
-                eos=EOSResults(1.001195, -1.036848, 3.993066, -7.424327, 0.28037, 86625632.0),
+                t=3e4,
+                rho=7.76229824e-10,
+                kappa=0.22766244,
+                eos=EOSResults(1.02917524, -1.69374361, 1.93590453, -1.31933614, 0.22034105, 5.9938266e+09),
             ),
             param(
                 composition='solar',
                 p=1e3,
                 t=1e4,
                 rho=1.024002e-09,
-                kappa=18.259231,
+                kappa=18.345603,
                 eos=EOSResults(1.114417, -3.092285, 0.847222, -0.902434, 0.078645, 4.060632e+09),
+            ),
+            param(
+                composition='solar',
+                p=1e3,
+                t=10**3.84,  # inside lowT and normal opacity tables blending interval
+                rho=2.22718465e-09,
+                kappa=0.26554388,
+                eos=EOSResults(1.00607563, -1.15243794, 1.2775947, -4.65811899, 0.18233674, 4.20004691e+08),
             ),
         ]
     )
