@@ -5,6 +5,7 @@ cdef extern from 'opacity.h' nogil:
     cdef int NUM_EOS_RESULTS
     cdef int NUM_CHEM_ISOS_POINTER
     cdef int SOLSIZE
+    cdef int NUM_KAPPA_FRACS
 
     ctypedef struct Opacity:
         int EOS_HANDLER
@@ -20,6 +21,7 @@ cdef extern from 'opacity.h' nogil:
         double ABAR
         double ZBAR
         double Z2BAR
+        double Z53BAR
         double YE
         int* NET_ISO
         int* CHEM_ID
@@ -38,6 +40,9 @@ cdef extern from 'opacity.h' nogil:
                      double*, double*, double*, double*,
                      double*,
                      int*)
-    cdef void kap_DT(Opacity*, double, double, double,
-                     double*, double*, double*, int*)
+    cdef void kap_DT(Opacity*, double, double,
+                     double, double, double,
+                     double, double, double,
+                     double*, double*, double*, double*,
+                     int*)
     cdef int nuclide_index(char*)

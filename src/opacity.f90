@@ -20,21 +20,20 @@
             nuclide_index, solsiz, solx, get_sol_x
 
       logical, parameter :: use_cache = .true.
-      character (len=256), parameter :: kappa_file_prefix = 'gs98'
-      character (len=256), parameter :: kappa_CO_prefix = 'gs98_co'
-      character (len=256), parameter :: kappa_lowT_prefix = &
-            'lowT_fa05_gs98'
-      
+
       integer(c_int), protected, bind(C, name="NUM_EOS_RESULTS") :: &
             num_eos_resuls = num_eos_basic_results
 
       integer(c_int), protected, bind(C, name="SOLSIZE") :: &
             solsize = solsiz
 
+      integer(c_int), protected, bind(C, name="NUM_KAPPA_FRACS") :: &
+            num_kappa_fracs = num_kap_fracs
+
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
          integer(c_int) :: species
-         real(c_double) :: X, Y, Z, XC, XN, XO, XNe, abar, zbar, z2bar, ye
+         real(c_double) :: X, Y, Z, XC, XN, XO, XNe, abar, zbar, z2bar, z53bar, ye
          type(c_ptr) :: net_iso, chem_id, xa
       end type Opacity
 
@@ -95,16 +94,18 @@
          integer :: ierr
 
          ierr = 0
-         call const_init('', ierr)
+         call const_init("", ierr)
          if (ierr /= 0) then
             write(*,*) 'const_init failed'
             stop 1
          end if
       end subroutine mesa_init_const
 
+
       subroutine mesa_init_math()
          call math_init()
       end subroutine mesa_init_math
+
 
       subroutine mesa_init_chem()
          implicit none
@@ -118,32 +119,30 @@
          end if
       end subroutine mesa_init_chem
 
+
       subroutine mesa_init_eos()
          implicit none
          integer :: ierr
          
-         call eos_init('mesa', '', '', '', use_cache, ierr)
+         call eos_init("", use_cache, ierr)
          if (ierr /= 0) then
             write(*,*) 'eos_init failed'
             stop 1
          end if
       end subroutine mesa_init_eos
 
+
       subroutine mesa_init_kap()
          implicit none
          integer :: ierr
-         real(kind=8), parameter :: kap_blend_logT_upper_bdy = 3.88_dp  ! default
-         real(kind=8), parameter :: kap_blend_logT_lower_bdy = 3.80_dp  ! default
 
-         call kap_init(kappa_file_prefix, kappa_CO_prefix, &
-                 kappa_lowT_prefix, kap_blend_logT_upper_bdy, &
-                 kap_blend_logT_lower_bdy, use_cache, &
-                 '', '', .false., ierr)
+         call kap_init(use_cache, "", ierr)
          if(ierr /= 0) then
             write(*,*) 'kap_init failed'
             stop 1
          end if
       end subroutine mesa_init_kap
+
 
       subroutine init_mesa() bind(C, name='init_mesa')
          call mesa_init_const()
@@ -153,13 +152,16 @@
          call mesa_init_kap()
       end subroutine init_mesa
 
+
       subroutine mesa_shutdown_eos()
          call eos_shutdown()
       end subroutine mesa_shutdown_eos
 
+
       subroutine mesa_shutdown_kap()
          call kap_shutdown()
       end subroutine mesa_shutdown_kap
+
 
       subroutine shutdown_mesa() bind(C, name='shutdown_mesa')
          call mesa_shutdown_eos()
@@ -171,8 +173,7 @@
          implicit none
          type(Opacity), intent(inout) :: op
          integer :: ierr, i
-         real(kind=8) :: frac, dabar_dx(op%species), dzbar_dx(op%species), &
-               sumx, xh, xhe, xz, mass_correction, dmc_dx(op%species)
+         real(kind=8) :: frac, sumx, xh, xhe, xz, mass_correction
          integer(c_int), pointer, dimension(:) :: chem_id, net_iso
          real(c_double), pointer, dimension(:) :: xa
          integer :: ihe6, ihe7, ihe8, ihe9, ihe10
@@ -258,10 +259,9 @@
              op%XNe = op%XNe / op%Z
          end if
 
-         call composition_info( &
-               op%species, chem_id, xa, xh, xhe, xz, op%abar, &
-               op%zbar, op%z2bar, op%ye, mass_correction, sumx, &
-               dabar_dx, dzbar_dx, dmc_dx)
+         call basic_composition_info( &
+               op%species, chem_id, xa, xh, xhe, xz, op%abar, op%zbar, &
+               op%z2bar, op%z53bar, op%ye, mass_correction, sumx)
       end subroutine init_eos
 
 
@@ -269,36 +269,18 @@
          implicit none
          type(Opacity), intent(inout) :: op
          integer :: ierr
-
-         logical, parameter :: cubic_interpolation_in_X = .true.
-         logical, parameter :: cubic_interpolation_in_Z = .true.
-         logical, parameter :: include_electron_conduction = .true.
-         ! We are not going to use Zbase which is for CN abundance
-         logical, parameter :: use_Zbase_for_Type1 = .false.
-         ! We don not need Type2 opacities, which are useful
-         ! for CN-rich composition only.
-         ! All Type2 variables are not used
-         logical, parameter :: use_Type2_opacities = .false.
-         real(kind=8), parameter :: kap_Type2_full_off_X = 0.71_dp
-         real(kind=8), parameter :: kap_Type2_full_on_X = 0.70_dp
-         real(kind=8), parameter :: kap_Type2_full_off_dZ = 0.001_dp
-         real(kind=8), parameter :: kap_Type2_full_on_dZ = 0.01_dp
-
+         type (Kap_General_Info), pointer :: rq
 
          op%kap_handle = alloc_kap_handle(ierr)
          if(ierr/=0) stop 'problem in alloc_kap_handle'
 
-
-         call kap_set_choices( &
-               op%kap_handle, cubic_interpolation_in_X, cubic_interpolation_in_Z, &
-               include_electron_conduction, &
-               use_Zbase_for_Type1, use_Type2_opacities, &
-               kap_Type2_full_off_X, kap_Type2_full_on_X, &
-               kap_Type2_full_off_dZ, kap_Type2_full_on_dZ, &
-               ierr)
-
-         if(ierr/=0) stop 'problem in kap_set_interpolation_choices'
+         call get_kap_ptr(op%kap_handle, rq, ierr)
+         if (ierr/=0) stop 'problem in get_kap_ptr'
+         ! We don not need Type2 opacities, which are useful
+         ! for CN-rich composition only.
+         rq%use_Type2_opacities = .false.
       end subroutine init_kap
+
 
       function get_num_chem_isos() result(n) bind(C, name='get_num_chem_isos')
           implicit none
@@ -306,6 +288,7 @@
 
           n = num_chem_isos
       end function get_num_chem_isos
+
 
       subroutine init_Opacity(op) bind(C, name='init_Opacity')
          implicit none
@@ -357,8 +340,8 @@
          real(c_double), intent(inout) :: res(num_eos_basic_results)
          integer(c_int), intent(out) :: ierr
          real(c_double), dimension(num_eos_basic_results) :: &
-               d_dlnRho_const_T, d_dlnT_const_Rho, &
-               d_dabar_const_TRho, d_dzbar_const_TRho
+               d_dlnRho_const_T, d_dlnT_const_Rho
+         real(c_double), dimension(num_eos_d_dxa_results, op%species) :: d_dxa_const_TRho
          integer(c_int), pointer, dimension(:) :: net_iso, chem_id
          real(c_double), pointer, dimension(:) :: xa
 
@@ -366,39 +349,45 @@
          call c_f_pointer(op%chem_id, chem_id, [op%species])
          call c_f_pointer(op%xa, xa, [op%species])
 
-
-         call eosPT_get(op%eos_handle, op%Z, op%X, op%abar, op%zbar, &
+         call eosPT_get(op%eos_handle, &
                op%species, chem_id, net_iso, xa, &
                Pgas, log10(Pgas), T, log10(T), &
-               Rho, log10Rho, &
-               dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
+               Rho, log10Rho, dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
                res, d_dlnRho_const_T, d_dlnT_const_Rho, &
-               d_dabar_const_TRho, d_dzbar_const_TRho, &
+               d_dxa_const_TRho, &
                ierr)
       end subroutine eos_PT
 
 
-      subroutine kap_DT(op, Rho, T, lnfree_e, &
-            kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr &
+      subroutine kap_DT(op, Rho, T, &
+            lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
+            eta, d_eta_dlnRho, d_eta_dlnT, &
+            kap_fracs, kappa, dlnkap_dlnRho, dlnkap_dlnT, &
+            ierr &
             ) bind(C, name='kap_DT')
          implicit none
          type(Opacity), intent(in) :: op
-         real(c_double), value, intent(in) :: Rho, T, lnfree_e
+         real(c_double), value, intent(in) :: Rho, T
+         real(c_double), value, intent(in) :: lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT
+         real(c_double), value, intent(in) :: eta, d_eta_dlnRho, d_eta_dlnT
+         real(c_double), intent(out) :: kap_fracs(num_kap_fracs)
          real(c_double), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
          integer(c_int), intent(out) :: ierr
-         real(kind=8), parameter :: d_lnfree_e_dlnRho = 0.0  ! needed for Compton
-         real(kind=8), parameter :: d_lnfree_e_dlnT = 0.0  ! needed for Compton
+
+         real(kind=8) :: dlnkap_dxa(op%species)  ! not used and not implemented in Mesa 22.05
          real(kind=8) :: frac_Type2
+         integer(c_int), pointer, dimension(:) :: net_iso, chem_id
+         real(c_double), pointer, dimension(:) :: xa
 
-         ! We do not need Type2 opacities which use Zbase for CN abundance
-         real(kind=8), parameter :: Zbase = -1.0_dp
+         call c_f_pointer(op%net_iso, net_iso, [num_chem_isos])
+         call c_f_pointer(op%chem_id, chem_id, [op%species])
+         call c_f_pointer(op%xa, xa, [op%species])
 
-         call kap_get(op%kap_handle, op%species, &
-               op%zbar, op%X, op%Z, Zbase, &
-               op%XC, op%XN, op%XO, op%XNe, &
+         call kap_get(op%kap_handle, op%species, chem_id, net_iso, xa, &
                log10(Rho), log10(T), &
                lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
-               frac_Type2, kappa, dlnkap_dlnRho, dlnkap_dlnT, ierr)
+               eta, d_eta_dlnRho, d_eta_dlnT, &
+               kap_fracs, kappa, dlnkap_dlnRho, dlnkap_dlnT, dlnkap_dxa, ierr)
       end subroutine kap_DT
 
 

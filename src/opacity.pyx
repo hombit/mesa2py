@@ -136,7 +136,6 @@ cdef class _Opac:
             ierr,
             mu, lnfree_e, grad_ad, c_p
         )
-        cdef int i
         while cnp.PyArray_MultiIter_NOTDONE(it):
             eos_PT(&self.fort_opacity,
                    (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],
@@ -170,33 +169,52 @@ cdef class _Opac:
                                    mu, lnfree_e, grad_ad, c_p)
         return rho
 
-
     def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):
         cdef tuple base_shape = cnp.broadcast(rho, temp).shape
+
+        lnfree_e = np.zeros(base_shape, np.double)
+        d_lnfree_e_d_lnRho = np.zeros(base_shape, np.double)
+        d_lnfree_e_d_lnT = np.zeros(base_shape, np.double)
+        eta = np.zeros(base_shape, np.double)
+        d_eta_d_lnRho = np.zeros(base_shape, np.double)
+        d_eta_d_lnT = np.zeros(base_shape, np.double)
+
+        kappa_fracs = np.empty(base_shape + (NUM_KAPPA_FRACS,), np.double)
         kappa = np.empty(base_shape, np.double)
         dlnkap_dlnRho = np.empty(base_shape, np.double)
         dlnkap_dlnT = np.empty(base_shape, np.double)
         ierr = np.zeros(base_shape, np.intc)
-        
+
+        cdef int i_kappa_frac
+
         cdef cnp.broadcast it = cnp.broadcast(
-            rho, temp, lnfree_e,
-            kappa, dlnkap_dlnRho, dlnkap_dlnT,
+            rho, temp,
+            lnfree_e, d_lnfree_e_d_lnRho, d_lnfree_e_d_lnT,
+            eta, d_eta_d_lnRho, d_eta_d_lnT,
+            kappa_fracs, kappa, dlnkap_dlnRho, dlnkap_dlnT,
             ierr
         )
-        cdef int i
         while cnp.PyArray_MultiIter_NOTDONE(it):
             kap_DT(&self.fort_opacity,
-                        (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],
-                        (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],
-                        (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0],
-                        <double*> cnp.PyArray_MultiIter_DATA(it, 3),
-                        <double*> cnp.PyArray_MultiIter_DATA(it, 4),
-                        <double*> cnp.PyArray_MultiIter_DATA(it, 5),
-                        <int*> cnp.PyArray_MultiIter_DATA(it, 6))
-            if (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0] = NAN
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],  # Rho
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],  # T
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0],  # lnfree_e
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0],  # d_lnfree_e_d_lnRho
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0],  # d_lnfree_e_d_lnT
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0],  # eta
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 6))[0],  # d_eta_d_lnRho
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0],  # d_eta_d_lnT
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 8),       # kappa_fracs, (NUM_KAPPA_FRACS,)
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 9),       # kappa
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 10),      # d_lnkap_d_lnRho
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 11),      # d_lnkap_d_lnT
+                   <int*> cnp.PyArray_MultiIter_DATA(it, 12))         # ierr
+            if (<int*> cnp.PyArray_MultiIter_DATA(it, 12))[0] != 0:                    # ierr
+                for i_kappa_frac in range(NUM_KAPPA_FRACS):
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[i_kappa_frac] = NAN  # kappa_fracs
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN                 # kappa
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = NAN                # d_lnkap_d_lnRho
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 11))[0] = NAN                # d_lnkap_d_lnT
             cnp.PyArray_MultiIter_NEXT(it)
         if return_grad:
             return kappa, dlnkap_dlnRho, dlnkap_dlnT
