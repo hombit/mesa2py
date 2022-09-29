@@ -64,6 +64,8 @@ cdef class _Opac:
         self.fort_opacity.CHEM_ID = &view_chem_id[0]
         self.fort_opacity.XA = &view_xa[0]
 
+        self.eos_result_dtype = np.dtype([(name, np.double) for name in self.eos_result_names])
+
         if composition == 'solar':
             get_sol_x(&view_xa[0])
             get_sol_chem_id(&view_chem_id[0])
@@ -88,6 +90,10 @@ cdef class _Opac:
 
     def __dealloc__(self):
         shutdown_Opacity(&self.fort_opacity)
+
+    @property
+    def eos_result_names(self):
+        return list(map(str, range(3 * NUM_EOS_RESULTS)))
 
     @property
     def X(self):
@@ -117,59 +123,46 @@ cdef class _Opac:
         """Density from gas pressure and temperature"""
         cdef tuple base_shape = cnp.broadcast(pres, temp).shape
         rho = np.empty(base_shape, np.double)
-        log10Rho = np.empty(base_shape, np.double)
         dlnRho_dlnPgas_const_T = np.empty(base_shape, np.double)
         dlnRho_dlnT_const_Pgas = np.empty(base_shape, np.double)
-        ierr = np.zeros(base_shape, dtype=np.intc)
 
-        mu = np.empty(base_shape, np.double)
-        lnfree_e = np.empty(base_shape, np.double)
-        grad_ad = np.empty(base_shape, np.double)
-        c_p = np.empty(base_shape, np.double)
+        # Various thermodynamic quantities and there derivatives
+        eos_result = np.recarray(base_shape, dtype=self.eos_result_dtype)
 
-        res = view.array(shape=(NUM_EOS_RESULTS,), itemsize=sizeof(double), format='d')
-        cdef double[:] res_view = res
-        
+        cdef int ierr = 0
+
+        cdef int i_eos_result
+
         cdef cnp.broadcast it = cnp.broadcast(
-            pres, temp, rho, log10Rho,
+            pres, temp, rho,
             dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-            ierr,
-            mu, lnfree_e, grad_ad, c_p
+            eos_result,
         )
         while cnp.PyArray_MultiIter_NOTDONE(it):
             eos_PT(&self.fort_opacity,
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],
-                   (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 2),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 3),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 4),
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 5),
-                   &res_view[0],
-                   <int*> cnp.PyArray_MultiIter_DATA(it, 6))
-            if full_output:
-                # These indexes are grabbed from eos_def
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = res[3]
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = res[4]
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = res[6]
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = res[9]
-                if (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = NAN
-            elif (<int*> cnp.PyArray_MultiIter_DATA(it, 6))[0] != 0:
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 0))[0],                     # Pgas
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 1))[0],                     # T
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 2),                          # Rho
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 3),                          # dlnRho_dlnPgas_const_T
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 4),                          # dlnRho_dlnT_const_Pgas
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 5),                          # res
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 5)) + NUM_EOS_RESULTS,      # d_dlnRho_const_T
+                   (<double*> cnp.PyArray_MultiIter_DATA(it, 5)) + 2 * NUM_EOS_RESULTS,  # d_dlnT_const_Rho
+                   &ierr)
+            if ierr != 0:
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 2))[0] = NAN                 # Rho
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 3))[0] = NAN                 # dlnRho_dlnPgas_const_T
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 4))[0] = NAN                 # dlnRho_dlnT_const_Pgas
+                for i_eos_result in range(3 * NUM_EOS_RESULTS):
+                    (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[i_eos_result] = NAN  # res and derivatives
+            ierr = 0
             cnp.PyArray_MultiIter_NEXT(it)
         if full_output:
-            return rho, EOSResults(dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas,
-                                   mu, lnfree_e, grad_ad, c_p)
+            return rho, eos_result
         return rho
 
     def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):
+        """Opacity from density and temperature"""
         cdef tuple base_shape = cnp.broadcast(rho, temp).shape
 
         lnfree_e = np.zeros(base_shape, np.double)
@@ -179,20 +172,17 @@ cdef class _Opac:
         d_eta_d_lnRho = np.zeros(base_shape, np.double)
         d_eta_d_lnT = np.zeros(base_shape, np.double)
 
-        kappa_fracs = np.empty(base_shape + (NUM_KAPPA_FRACS,), np.double)
         kappa = np.empty(base_shape, np.double)
         dlnkap_dlnRho = np.empty(base_shape, np.double)
         dlnkap_dlnT = np.empty(base_shape, np.double)
-        ierr = np.zeros(base_shape, np.intc)
 
-        cdef int i_kappa_frac
+        cdef int ierr = 0
 
         cdef cnp.broadcast it = cnp.broadcast(
             rho, temp,
             lnfree_e, d_lnfree_e_d_lnRho, d_lnfree_e_d_lnT,
             eta, d_eta_d_lnRho, d_eta_d_lnT,
-            kappa_fracs, kappa, dlnkap_dlnRho, dlnkap_dlnT,
-            ierr
+            kappa, dlnkap_dlnRho, dlnkap_dlnT,
         )
         while cnp.PyArray_MultiIter_NOTDONE(it):
             kap_DT(&self.fort_opacity,
@@ -204,17 +194,15 @@ cdef class _Opac:
                    (<double*> cnp.PyArray_MultiIter_DATA(it, 5))[0],  # eta
                    (<double*> cnp.PyArray_MultiIter_DATA(it, 6))[0],  # d_eta_d_lnRho
                    (<double*> cnp.PyArray_MultiIter_DATA(it, 7))[0],  # d_eta_d_lnT
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 8),       # kappa_fracs, (NUM_KAPPA_FRACS,)
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 9),       # kappa
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 10),      # d_lnkap_d_lnRho
-                   <double*> cnp.PyArray_MultiIter_DATA(it, 11),      # d_lnkap_d_lnT
-                   <int*> cnp.PyArray_MultiIter_DATA(it, 12))         # ierr
-            if (<int*> cnp.PyArray_MultiIter_DATA(it, 12))[0] != 0:                    # ierr
-                for i_kappa_frac in range(NUM_KAPPA_FRACS):
-                    (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[i_kappa_frac] = NAN  # kappa_fracs
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN                 # kappa
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = NAN                # d_lnkap_d_lnRho
-                (<double*> cnp.PyArray_MultiIter_DATA(it, 11))[0] = NAN                # d_lnkap_d_lnT
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 8),       # kappa
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 9),       # d_lnkap_d_lnRho
+                   <double*> cnp.PyArray_MultiIter_DATA(it, 10),      # d_lnkap_d_lnT
+                   &ierr)
+            if ierr != 0:
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 8))[0] = NAN   # kappa
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 9))[0] = NAN   # d_lnkap_d_lnRho
+                (<double*> cnp.PyArray_MultiIter_DATA(it, 10))[0] = NAN  # d_lnkap_d_lnT
+            ierr = 0
             cnp.PyArray_MultiIter_NEXT(it)
         if return_grad:
             return kappa, dlnkap_dlnRho, dlnkap_dlnT
@@ -276,4 +264,3 @@ class Opac(_Opac):
             cls.obj_refs[composition] = obj
         
         return cls.obj_refs[composition]
-

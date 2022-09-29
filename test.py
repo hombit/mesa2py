@@ -128,8 +128,8 @@ class OpacUnitTestCase(unittest.TestCase):
         with self.subTest('rho'):
             assert_allclose(op.rho(p, t), rho, rtol=1e-5)
         with self.subTest('kappa'):
-            assert_allclose(op.kappa(rho, t), kappa, rtol=1e-5)
-        _, eos_actual = op.rho(p, t, True)
+            assert_allclose(op.kappa(rho, t, lnfree_e=0.0), kappa, rtol=1e-5)
+        _, eos_actual = op.rho(p, t, full_output=True)
         for field in eos._fields:
             with self.subTest('eos-{}'.format(field)):
                 assert_allclose(getattr(eos_actual, field), getattr(eos, field), rtol=1e-5)

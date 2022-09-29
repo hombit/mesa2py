@@ -27,9 +27,6 @@
       integer(c_int), protected, bind(C, name="SOLSIZE") :: &
             solsize = solsiz
 
-      integer(c_int), protected, bind(C, name="NUM_KAPPA_FRACS") :: &
-            num_kappa_fracs = num_kap_fracs
-
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
          integer(c_int) :: species
@@ -328,19 +325,19 @@
 
       
       subroutine eos_PT(op, Pgas, T, &
-            Rho, log10Rho, dlnRho_dlnPgas_const_T, &
-            dlnRho_dlnT_const_Pgas, res, &
+            Rho, dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas, &
+            res, d_dlnRho_const_T, d_dlnT_const_Rho, &
             ierr &
             ) bind(C, name='eos_PT')
          implicit none
          type(Opacity), intent(in) :: op
          real(c_double), value :: Pgas, T
-         real(c_double), intent(out) :: Rho, log10Rho, &
+         real(c_double), intent(out) :: Rho, &
                dlnRho_dlnPgas_const_T, dlnRho_dlnT_const_Pgas
-         real(c_double), intent(inout) :: res(num_eos_basic_results)
+         real(c_double), intent(out), dimension(num_eos_basic_results) :: &
+               res, d_dlnRho_const_T, d_dlnT_const_Rho
          integer(c_int), intent(out) :: ierr
-         real(c_double), dimension(num_eos_basic_results) :: &
-               d_dlnRho_const_T, d_dlnT_const_Rho
+         real(c_double) :: log10Rho
          real(c_double), dimension(num_eos_d_dxa_results, op%species) :: d_dxa_const_TRho
          integer(c_int), pointer, dimension(:) :: net_iso, chem_id
          real(c_double), pointer, dimension(:) :: xa
@@ -362,7 +359,7 @@
       subroutine kap_DT(op, Rho, T, &
             lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT, &
             eta, d_eta_dlnRho, d_eta_dlnT, &
-            kap_fracs, kappa, dlnkap_dlnRho, dlnkap_dlnT, &
+            kappa, dlnkap_dlnRho, dlnkap_dlnT, &
             ierr &
             ) bind(C, name='kap_DT')
          implicit none
@@ -370,12 +367,12 @@
          real(c_double), value, intent(in) :: Rho, T
          real(c_double), value, intent(in) :: lnfree_e, d_lnfree_e_dlnRho, d_lnfree_e_dlnT
          real(c_double), value, intent(in) :: eta, d_eta_dlnRho, d_eta_dlnT
-         real(c_double), intent(out) :: kap_fracs(num_kap_fracs)
          real(c_double), intent(out) :: kappa, dlnkap_dlnRho, dlnkap_dlnT
          integer(c_int), intent(out) :: ierr
 
+         real(kind=8) :: kap_fracs(num_kap_fracs)  ! contribution of each opacity table, not used
          real(kind=8) :: dlnkap_dxa(op%species)  ! not used and not implemented in Mesa 22.05
-         real(kind=8) :: frac_Type2
+
          integer(c_int), pointer, dimension(:) :: net_iso, chem_id
          real(c_double), pointer, dimension(:) :: xa
 

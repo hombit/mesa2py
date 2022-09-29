@@ -4,7 +4,6 @@
 extern int NUM_EOS_RESULTS;
 extern int NUM_CHEM_ISOS_POINTER;
 extern int SOLSIZE;
-extern int NUM_KAPPA_FRACS;
 
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
@@ -25,13 +24,13 @@ extern void shutdown_mesa();
 extern void init_Opacity(Opacity*);
 extern void shutdown_Opacity(Opacity*);
 extern void eos_PT(Opacity* op, double Pgas, double T,
-	double* Rho, double* log10Rho,
-	double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas, double* res,
+	double* Rho, double* dlnRho_dlnPgas_const_T, double* dlnRho_dlnT_const_Pgas,
+	double* res, double* d_dlnRho_const_T, double *d_dlnT_const_Rho,
 	int* ierr);
 extern void kap_DT(Opacity* op, double Rho, double T,
     double lnfree_e, double d_lnfree_e_dlnRho, double d_lnfree_e_dlnT,
     double eta, double d_eta_dlnRho, double d_eta_dlnT,
-	double* kappa_fracs, double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT,
+	double* kappa, double* dlnkap_dlnRho, double* dlnkap_dlnT,
 	int* ierr);
 
 extern int nuclide_index(char* nuclei);
