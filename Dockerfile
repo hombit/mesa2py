@@ -20,10 +20,13 @@ COPY build_mesa.sh /mesa2py/
 WORKDIR /mesa2py
 RUN ./build_mesa.sh
 
+VOLUME /mesa/data/eosDT_data/cache
+VOLUME /mesa/data/kap_data/cache
+
 COPY setup.py /mesa2py/
 COPY --chown=mesa:mesa src/ /mesa2py/src/
 RUN source $MESASDK_ROOT/bin/mesasdk_init.sh && \
     python3 setup.py install --user
 
 COPY test.py /mesa2py/
-RUN python -mpytest test.py
+RUN python -mpytest test.py -s
