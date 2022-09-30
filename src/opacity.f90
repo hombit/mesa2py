@@ -296,6 +296,7 @@
          ! We don not need Type2 opacities, which are useful
          ! for CN-rich composition only.
          rq%use_Type2_opacities = .false.
+         rq%use_Zbase_for_Type1 = .false.
       end subroutine init_kap
 
 
