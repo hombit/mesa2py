@@ -27,6 +27,10 @@
       integer(c_int), protected, bind(C, name="SOLSIZE") :: &
             solsize = solsiz
 
+      ! Extra space for the null terminator
+      integer(c_int), protected, bind(C, name="EOS_NAME_LENGTH") :: &
+            c_eos_name_length = eos_name_length + 1
+
       type, bind(C) :: Opacity
          integer(c_int) :: eos_handle, kap_handle
          integer(c_int) :: species
@@ -76,14 +80,30 @@
          allocate(character(len=i) :: str)
          str = transfer(c_nuclei(1:i), str)
 
-!         type(c_ptr), intent(in) :: c_nuclei
-!         character(kind=c_char), pointer, dimension(:) :: nuclei
-!         integer(kind=c_size_t), intent(in) :: len_nuclei
-!         integer(c_int) :: indx
-!
-!         call c_f_pointer(c_nuclei, nuclei, [len_nuclei])
          indx = get_nuclide_index(str)
       end function nuclide_index
+
+
+      ! len_trim is not available in Fortran 90, so we just use the whole string and deal
+      ! with it in the Python code
+      subroutine get_eosDT_result_name(c_index, name) bind(C, name='get_eosDT_result_name')
+         integer(c_int), value :: c_index
+         type(c_ptr), value :: name
+
+         character(kind=c_char), pointer, dimension(:) :: f_str
+         integer :: i, f_index
+
+         f_index = c_index + 1
+
+         ! Extra space for the null terminator
+         call c_f_pointer(name, f_str, [eos_name_length + 1])
+
+         ! Not very efficient, but we need to do it once per Opac instance
+         do i = 1, eos_name_length
+            f_str(i:i) = eosDT_result_names(f_index)(i:i)
+         end do
+         f_str(eos_name_length + 1:eos_name_length + 1) = c_null_char
+      end subroutine get_eosDT_result_name
 
 
       subroutine mesa_init_const()

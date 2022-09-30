@@ -1,5 +1,6 @@
 import math as m
 import os
+import re
 import weakref
 from collections import OrderedDict, namedtuple
 
@@ -30,13 +31,6 @@ class Mesa(_Mesa):
             obj = super().__new__(cls, mesa_dir)
             cls.obj_ref = weakref.ref(obj)
         return cls.obj_ref()
-
-
-EOSResults = namedtuple(
-    'EOSResults', 
-    ('dlnRho_dlnPgas_const_T', 'dlnRho_dlnT_const_Pgas',
-     'mu', 'lnfree_e', 'grad_ad', 'c_p',),
-)
 
 
 cdef class _Opac:
@@ -93,7 +87,28 @@ cdef class _Opac:
 
     @property
     def eos_result_names(self):
-        return list(map(str, range(3 * NUM_EOS_RESULTS)))
+        name_array = view.array(shape=(EOS_NAME_LENGTH,), itemsize=sizeof(char), format='c')
+        cdef char[:] name_view = name_array
+
+        cdef int i
+        cdef bytes name_bytes
+
+        # Names for res array components
+        res_names = []
+        for i in range(NUM_EOS_RESULTS):
+            get_eosDT_result_name(i, &name_view[0])
+            untrimmed_name = bytes(name_array).decode()
+            # Trim whitespaces and remove stuff like "/"
+            name = re.sub(r'\W', '', untrimmed_name)
+            res_names.append(name)
+
+        names = (
+            res_names
+            + [f'd_{name}_dlnRho_const_T' for name in res_names]
+            + [f'd_{name}_dlnT_const_Rho' for name in res_names]
+        )
+
+        return names
 
     @property
     def X(self):

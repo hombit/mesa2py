@@ -4,6 +4,7 @@
 extern int NUM_EOS_RESULTS;
 extern int NUM_CHEM_ISOS_POINTER;
 extern int SOLSIZE;
+extern int EOS_NAME_LENGTH;
 
 typedef struct {
 	int EOS_HANDLER, KAP_HANDLER;
@@ -17,6 +18,8 @@ typedef struct {
 extern void get_sol_x(double*);
 extern void get_sol_chem_id(int*);
 extern int get_num_chem_isos();
+
+extern void get_eosDT_result_name(int index, char* name);
 
 extern void init_mesa();
 extern void shutdown_mesa();

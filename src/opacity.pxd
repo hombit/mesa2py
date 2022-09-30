@@ -5,6 +5,7 @@ cdef extern from 'opacity.h' nogil:
     cdef int NUM_EOS_RESULTS
     cdef int NUM_CHEM_ISOS_POINTER
     cdef int SOLSIZE
+    cdef int EOS_NAME_LENGTH
 
     ctypedef struct Opacity:
         int EOS_HANDLER
@@ -29,6 +30,8 @@ cdef extern from 'opacity.h' nogil:
     cdef void get_sol_x(double*)
     cdef void get_sol_chem_id(int*)
     cdef int get_num_chem_isos()
+
+    cdef void get_eosDT_result_name(int, char*);
 
     cdef void init_mesa()
     cdef void shutdown_mesa()
