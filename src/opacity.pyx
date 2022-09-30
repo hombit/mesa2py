@@ -176,16 +176,28 @@ cdef class _Opac:
             return rho, eos_result
         return rho
 
-    def kappa(self, rho, temp, lnfree_e=default_lnfree_e, return_grad=False):
+    def kappa(self, rho, temp, eos=None, return_grad=False):
         """Opacity from density and temperature"""
-        cdef tuple base_shape = cnp.broadcast(rho, temp).shape
+        cdef tuple base_shape
+        cdef cnp.ndarray lnfree_e, d_lnfree_e_d_lnRho, d_lnfree_e_d_lnT, eta, d_eta_d_lnRho, d_eta_d_lnT
+        if eos is None:
+            base_shape = cnp.broadcast(eos).shape
 
-        lnfree_e = np.zeros(base_shape, np.double)
-        d_lnfree_e_d_lnRho = np.zeros(base_shape, np.double)
-        d_lnfree_e_d_lnT = np.zeros(base_shape, np.double)
-        eta = np.zeros(base_shape, np.double)
-        d_eta_d_lnRho = np.zeros(base_shape, np.double)
-        d_eta_d_lnT = np.zeros(base_shape, np.double)
+            lnfree_e = np.zeros(base_shape, np.double)
+            d_lnfree_e_d_lnRho = np.zeros(base_shape, np.double)
+            d_lnfree_e_d_lnT = np.zeros(base_shape, np.double)
+            eta = np.zeros(base_shape, np.double)
+            d_eta_d_lnRho = np.zeros(base_shape, np.double)
+            d_eta_d_lnT = np.zeros(base_shape, np.double)
+        else:
+            lnfree_e = eos.lnfree_e
+            d_lnfree_e_d_lnRho = eos.d_lnfree_e_dlnRho_const_T
+            d_lnfree_e_d_lnT = eos.d_lnfree_e_dlnT_const_Rho
+            eta = eos.eta
+            d_eta_d_lnRho = eos.d_eta_dlnRho_const_T
+            d_eta_d_lnT = eos.d_eta_dlnT_const_Rho
+
+            base_shape = cnp.broadcast(rho, temp, lnfree_e).shape
 
         kappa = np.empty(base_shape, np.double)
         dlnkap_dlnRho = np.empty(base_shape, np.double)
