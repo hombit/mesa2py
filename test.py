@@ -134,7 +134,7 @@ class OpacUnitTestCase(unittest.TestCase):
 
         with self.subTest('kappa w/ vs w/o eos'):
             rho_actual, eos_actual = op.rho(p, t, full_output=True)
-            assert_allclose(op.kappa(rho_actual, t), op.kappa(rho_actual, t, eos=eos_actual), equal_none=False,
+            assert_allclose(op.kappa(rho_actual, t), op.kappa(rho_actual, t, eos=eos_actual), equal_nan=False,
                             rtol=1e-5, err_msg='kappa w/ vs w/o eos')
 
         _, eos_actual = op.rho(p, t, full_output=True)
