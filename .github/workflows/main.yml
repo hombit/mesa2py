@@ -8,5 +8,7 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: recursive
       - name: Build container
         run: docker build -t mesa2py .
