@@ -297,6 +297,7 @@
          ! for CN-rich composition only.
          rq%use_Type2_opacities = .false.
          rq%use_Zbase_for_Type1 = .false.
+         rq%use_blouin_conductive_opacities = .true.
       end subroutine init_kap
 
 

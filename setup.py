@@ -73,7 +73,7 @@ def main():
             '-lcrlibm', '-lcrmath', '-lhdf5', '-lhdf5_fortran', '-lgomp',
             '-llapack', '-lblas',
             # MESA:
-            '-lnet', '-leos', '-lkap', '-lrates', '-lchem', '-linterp_2d',
+            '-leos', '-lkap', '-lchem', '-linterp_2d',
             '-linterp_1d', '-lnum', '-lmath', '-lmtx', '-lconst', '-lutils',
             '-lhdf5io', '-lauto_diff',
         ],
