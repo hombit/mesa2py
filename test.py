@@ -7,7 +7,7 @@ import numpy as np
 from numpy.testing import assert_allclose, assert_array_equal
 from parameterized import parameterized, param
 
-from opacity import EOSResults, Mesa, Opac
+from opacity import Mesa, Opac
 
 
 class MesaUnitTestCase(unittest.TestCase):
@@ -39,7 +39,7 @@ class OpacUnitTestCase(unittest.TestCase):
             self.assertEqual(op.X, 1.0)
         
         p = 1e3
-        t = 1e7
+        t = 1e6
         rho, eos = op.rho(p, t, True)
         with self.subTest('rho'):
             assert_allclose(rho, p * eos.mu / (8.31e7 * t), rtol=1e-2)
@@ -93,44 +93,52 @@ class OpacUnitTestCase(unittest.TestCase):
                 composition={'h1': 1.0},
                 p=1e3,
                 t=1e4,
-                rho=7.75826e-10,
+                rho=7.749773e-10,
                 kappa=23.521732,
-                eos=EOSResults(1.122646, -3.244283, 0.644622, -0.57993, 0.077202, 5.751599e+09),
+                eos={'mu': 0.643923, 'Cp': 5.7465e+09, 'lnfree_e': -0.57849, 'grad_ad': 0.07727},
             ),
             param(
                 composition={'he4': 1.0},
                 p=1e3,
                 t=3e4,
-                rho=7.76229824e-10,
-                kappa=0.22766244,
-                eos=EOSResults(1.02917524, -1.69374361, 1.93590453, -1.31933614, 0.22034105, 5.9938266e+09),
+                rho=7.761565e-10,
+                kappa=0.227659,
+                eos={'mu': 1.935747, 'Cp': 6.01333e+09, 'lnfree_e': -1.32141, 'grad_ad': 0.219777},
             ),
             param(
                 composition='solar',
                 p=1e3,
                 t=1e4,
-                rho=1.024002e-09,
-                kappa=18.345603,
-                eos=EOSResults(1.114417, -3.092285, 0.847222, -0.902434, 0.078645, 4.060632e+09),
+                rho=1.02442e-09,
+                kappa=18.323045,
+                eos={'mu': 0.85119, 'Cp': 4.055806e+09, 'lnfree_e': -0.90484, 'grad_ad': 0.078819},
             ),
             param(
                 composition='solar',
                 p=1e3,
                 t=10**3.84,  # inside lowT and normal opacity tables blending interval
-                rho=2.22718465e-09,
-                kappa=0.26554388,
-                eos=EOSResults(1.00607563, -1.15243794, 1.2775947, -4.65811899, 0.18233674, 4.20004691e+08),
+                rho=2.229603e-09,
+                kappa=0.265253,
+                eos={'mu': 1.282465, 'Cp': 4.215608e+08, 'lnfree_e': -4.651135, 'grad_ad': 0.181976},
             ),
         ]
     )
     def test_regression(self, composition, p, t, rho, kappa, eos):
         op = Opac(composition)
-        with self.subTest('rho'):
-            assert_allclose(op.rho(p, t), rho, rtol=1e-5)
-        with self.subTest('kappa'):
-            assert_allclose(op.kappa(rho, t), kappa, rtol=1e-5)
-        _, eos_actual = op.rho(p, t, True)
-        for field in eos._fields:
-            with self.subTest('eos-{}'.format(field)):
-                assert_allclose(getattr(eos_actual, field), getattr(eos, field), rtol=1e-5)
 
+        with self.subTest('rho'):
+            assert_allclose(op.rho(p, t), rho, rtol=1e-5, err_msg='rho')
+
+        with self.subTest('kappa'):
+            assert_allclose(op.kappa(rho, t), kappa, rtol=1e-5, err_msg='kappa')
+
+        with self.subTest('kappa w/ vs w/o eos'):
+            rho_actual, eos_actual = op.rho(p, t, full_output=True)
+            assert_allclose(op.kappa(rho_actual, t), op.kappa(rho_actual, t, eos=eos_actual), equal_nan=False,
+                            rtol=1e-5, err_msg='kappa w/ vs w/o eos')
+
+        _, eos_actual = op.rho(p, t, full_output=True)
+        for field, value in eos.items():
+            subtest_name = f'eos.{field}'
+            with self.subTest(subtest_name):
+                assert_allclose(getattr(eos_actual, field), value, rtol=1e-5, err_msg=subtest_name)

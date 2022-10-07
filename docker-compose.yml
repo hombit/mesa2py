@@ -1,11 +1,14 @@
 version: '2'
 services:
-  mesa-src:
-    build: docker-mesa-src
-    image: hombit/docker-mesa-src:12778-python3.7-stretch
+  mesa-sdk:
+    build:
+      context: mesa-sdk
+    image: ghcr.io/hombit/mesa-sdk:22.6.1
   mesa2py:
-    build: .
-    container_name: mesa2py
-    image: mesa2py
+    build:
+      context: .
+      args:
+        - PYTHON_VERSION=3.10
+    image: ghcr.io/hombit/mesa2py:r22.05-python3.10
     depends_on:
-      - mesa-src
+      - mesa-sdk
