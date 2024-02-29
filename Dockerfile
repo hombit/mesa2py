@@ -1,7 +1,7 @@
-FROM ghcr.io/hombit/mesa-src:12778-python3.7-stretch
+# FROM mesa_source
+FROM ghcr.io/hombit/mesa-src:12778-python3.10-bookworm
 
 RUN apt-get update &&\
-    apt-get install -y python3-pip python3-setuptools &&\
     apt-get clean -y &&\
     rm -rf /var/lib/apt/lists/* &&\
     truncate -s 0 /var/log/*log
@@ -16,6 +16,7 @@ env MESA_DIR=/mesa
 
 COPY call_mesa_script.sh setup.py /mesa2py/
 WORKDIR /mesa2py
+RUN source $MESASDK_ROOT/bin/mesasdk_init.sh
 RUN python3 setup.py buildmesa
 
 RUN pip3 install pytest pytest-subtests parameterized
