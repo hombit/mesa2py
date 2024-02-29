@@ -1,5 +1,5 @@
 # FROM mesa_source
-FROM ghcr.io/hombit/mesa-src:12778-python3.10-bookworm
+FROM ghcr.io/hombit/mesa-src:12778-python3.11-bookworm
 
 RUN apt-get update &&\
     apt-get clean -y &&\
