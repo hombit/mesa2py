@@ -15,9 +15,10 @@ RUN wget --no-verbose -U "" -O /mesasdk.tar.gz http://user.astro.wisc.edu/~towns
     tar -xvf /mesasdk.tar.gz
 
 # BE CAREFUL, this is not a univeral link !!!
-RUN wget --no-verbose -U "" -O /mesa.zip https://zenodo.org/records/3698354/files/mesa-r${MESAVERSION}.zip?download=1
-RUN unzip /mesa.zip && rm mesa.zip
-RUN mv mesa-r${MESAVERSION} mesa
+RUN wget --no-verbose -U "" -O /mesa.zip https://zenodo.org/records/3698354/files/mesa-r${MESAVERSION}.zip?download=1 &&\
+    unzip /mesa.zip &&\
+    rm mesa.zip &&\
+    mv mesa-r${MESAVERSION} mesa
 
 COPY etc_ld.so.conf.d_mesasdk.conf /etc/ld.so.conf.d/mesasdk.conf
 RUN ldconfig
