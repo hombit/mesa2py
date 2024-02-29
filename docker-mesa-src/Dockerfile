@@ -13,11 +13,10 @@ RUN apt-get update &&\
 
 RUN wget --no-verbose -U "" -O /mesasdk.tar.gz http://user.astro.wisc.edu/~townsend/resource/download/mesasdk/mesasdk-x86_64-linux-${MESASDKVERSION}.tar.gz &&\
     tar -xvf /mesasdk.tar.gz
-RUN rm /mesasdk.tar.gz
 
-RUN wget --no-verbose -U "" -O /mesa.zip https://zenodo.org/records/3698354/files/mesa-r12778.zip?download=1
+RUN wget --no-verbose -U "" -O /mesa.zip https://zenodo.org/records/3698354/files/mesa-r${MESASDKVERSION}.zip?download=1
 RUN unzip /mesa.zip && rm mesa.zip
-RUN mv mesa-r12778 mesa
+RUN mv mesa-r${MESASDKVERSION} mesa
 
 COPY etc_ld.so.conf.d_mesasdk.conf /etc/ld.so.conf.d/mesasdk.conf
 RUN ldconfig
